@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "api/user;";
+
+message UserEmaileReq {
+      string token = 1;
+}
+
+message UserEmaileResponse {
+      string email = 1;
+}

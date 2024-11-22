@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package user;
+
+import "api/user/message.proto";
+
+option go_package = "api/user;";
+
+service UserInterface {
+      rpc GetUserEmail(user.UserEmaileReq) returns (user.UserEmaileResponse);
+}
