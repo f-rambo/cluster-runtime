@@ -50,7 +50,7 @@ func (a *AppInterface) UploadApp(ctx context.Context, req *appApi.FileUploadRequ
 	if err != nil {
 		return nil, err
 	}
-	app.Versions = append(app.Versions, appVersion)
+	app.AddVersion(appVersion)
 	appChartPath := fmt.Sprintf("%s/%s-%s%s", appPath, app.Name, appVersion.Version, fileExt)
 	if utils.IsFileExist(appChartPath) {
 		err = os.Remove(appChartPath)
@@ -62,7 +62,7 @@ func (a *AppInterface) UploadApp(ctx context.Context, req *appApi.FileUploadRequ
 	if err != nil {
 		return nil, err
 	}
-	return &appApi.GetAppAndVersionInfo{App: app, Version: appVersion}, nil
+	return &appApi.GetAppAndVersionInfo{App: app}, nil
 }
 
 func (a *AppInterface) upload(path, filename, chunk string) (string, error) {
@@ -93,6 +93,15 @@ func (a *AppInterface) upload(path, filename, chunk string) (string, error) {
 func (a *AppInterface) CheckCluster(ctx context.Context, _ *emptypb.Empty) (*appApi.CheckClusterResponse, error) {
 	ok := a.appUC.CheckCluster(ctx)
 	return &appApi.CheckClusterResponse{Ok: ok}, nil
+}
+
+func (a *AppInterface) Init(ctx context.Context, _ *emptypb.Empty) (*appApi.InitResponse, error) {
+	apps, appReleases, err := a.appUC.Init(ctx)
+	if err != nil {
+		return nil, err
+	}
+	appItems := &appApi.InitResponse{Apps: apps, Releases: appReleases}
+	return appItems, nil
 }
 
 func (a *AppInterface) GetClusterResources(ctx context.Context, appRelease *biz.AppRelease) (*appApi.AppReleaseResourceItems, error) {

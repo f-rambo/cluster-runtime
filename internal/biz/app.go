@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/conf"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/utils"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/pkg/errors"
@@ -19,7 +20,8 @@ import (
 )
 
 type AppUsecase struct {
-	log *log.Helper
+	log  *log.Helper
+	conf *conf.Bootstrap
 }
 
 func NewAppUseCase(logger log.Logger) *AppUsecase {
@@ -29,9 +31,85 @@ func NewAppUseCase(logger log.Logger) *AppUsecase {
 	return a
 }
 
+func (a *App) AddVersion(version *AppVersion) {
+	if a.Versions == nil {
+		a.Versions = make([]*AppVersion, 0)
+	}
+	a.Versions = append(a.Versions, version)
+}
+
+func (a *App) GetVersionById(id int64) *AppVersion {
+	for _, v := range a.Versions {
+		if id == 0 {
+			return v
+		}
+		if v.Id == id {
+			return v
+		}
+	}
+	return nil
+}
+
+func (a *App) DeleteVersion(version string) {
+	for index, v := range a.Versions {
+		if v.Version == version {
+			a.Versions = append(a.Versions[:index], a.Versions[index+1:]...)
+			return
+		}
+	}
+}
+
 func (a *AppUsecase) CheckCluster(_ context.Context) bool {
 	_, err := GetKubeClientByInCluster()
 	return err == nil
+}
+
+// initialization
+func (a *AppUsecase) Init(ctx context.Context) ([]*App, []*AppRelease, error) {
+	appPath, err := utils.GetServerStorePathByNames(utils.AppPackage)
+	if err != nil {
+		return nil, nil, err
+	}
+	configPath, err := utils.GetServerStorePathByNames(utils.ConfigPackage)
+	if err != nil {
+		return nil, nil, err
+	}
+	apps := make([]*App, 0)
+	appReleases := make([]*AppRelease, 0)
+	confApps := a.conf.Apps
+	for _, v := range confApps {
+		appchart := fmt.Sprintf("%s/%s-%s.tgz", appPath, v.Name, v.Version)
+		if !utils.IsFileExist(appchart) {
+			return nil, nil, fmt.Errorf("appchart not found: %s", appchart)
+		}
+		app := &App{Name: v.Name}
+		appVersion := &AppVersion{Chart: appchart, Version: v.Version}
+		err = a.GetAppAndVersionInfo(ctx, app, appVersion)
+		if err != nil {
+			return nil, nil, err
+		}
+		app.AddVersion(appVersion)
+		apps = append(apps, app)
+		appConfigPath := fmt.Sprintf("%s/%s-%s.yaml", configPath, v.Name, v.Version)
+		if utils.IsFileExist(appConfigPath) {
+			appConfig, err := os.ReadFile(appConfigPath)
+			if err != nil {
+				return nil, nil, err
+			}
+			appVersion.DefaultConfig = string(appConfig)
+		}
+		appRelease := &AppRelease{
+			ReleaseName: fmt.Sprintf("%s-%s", v.Name, v.Version),
+			AppId:       app.Id,
+			VersionId:   appVersion.Id,
+			Namespace:   v.Namespace,
+			Config:      appVersion.DefaultConfig,
+			Status:      AppReleaseSatus_APP_RELEASE_PENDING,
+			Wait:        true,
+		}
+		appReleases = append(appReleases, appRelease)
+	}
+	return apps, appReleases, nil
 }
 
 func (a *AppUsecase) GetPodResources(ctx context.Context, appRelease *AppRelease) ([]*AppReleaseResource, error) {

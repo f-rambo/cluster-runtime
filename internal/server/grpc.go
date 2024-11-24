@@ -30,14 +30,14 @@ func NewGRPCServer(c *conf.Server,
 			recovery.Recovery(),
 		),
 	}
-	if c.GRPC.Network != "" {
-		opts = append(opts, grpc.Network(c.GRPC.Network))
+	if c.Grpc.Network != "" {
+		opts = append(opts, grpc.Network(c.Grpc.Network))
 	}
-	if c.GRPC.Addr != "" {
-		opts = append(opts, grpc.Address(c.GRPC.Addr))
+	if c.Grpc.Addr != "" {
+		opts = append(opts, grpc.Address(c.Grpc.Addr))
 	}
-	if c.GRPC.Timeout != 0 {
-		opts = append(opts, grpc.Timeout(time.Duration(c.GRPC.Timeout)*time.Second))
+	if c.Grpc.Timeout != 0 {
+		opts = append(opts, grpc.Timeout(time.Duration(c.Grpc.Timeout)*time.Second))
 	}
 	srv := grpc.NewServer(opts...)
 	cluster.RegisterClusterInterfaceServer(srv, clusterInterface)
