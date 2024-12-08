@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package project;
+package clusterruntime.api.project;
 
 option go_package = "api/project;";
 
