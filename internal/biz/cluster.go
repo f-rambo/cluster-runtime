@@ -73,6 +73,14 @@ func (c *ClusterUsecase) CreateYAMLFile(ctx context.Context, dynamicClient *dyna
 	return nil
 }
 
+func (c *ClusterUsecase) CheckClusterInstalled(cluster *Cluster) error {
+	_, err := GetKubeClientByRestConfig(cluster.MasterIp, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
+	if err != nil {
+		return ErrClusterNotFound
+	}
+	return nil
+}
+
 func (c *ClusterUsecase) CurrentCluster(ctx context.Context, cluster *Cluster) (*Cluster, error) {
 	kubeClient, err := GetKubeClientByInCluster()
 	if err != nil {

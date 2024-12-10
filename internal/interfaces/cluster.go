@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"errors"
 
 	clusterApi "github.com/f-rambo/cloud-copilot/cluster-runtime/api/cluster"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/biz"
@@ -19,6 +20,21 @@ func NewClusterInterface(uc *biz.ClusterUsecase, logger log.Logger) *ClusterInte
 		uc:  uc,
 		log: log.NewHelper(logger),
 	}
+}
+
+func (c *ClusterInterface) CheckClusterInstalled(ctx context.Context, cluster *biz.Cluster) (*clusterApi.ClusterInstalled, error) {
+	err := c.uc.CheckClusterInstalled(cluster)
+	if errors.Is(err, biz.ErrClusterNotFound) {
+		return &clusterApi.ClusterInstalled{
+			Installed: false,
+		}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &clusterApi.ClusterInstalled{
+		Installed: true,
+	}, nil
 }
 
 func (c *ClusterInterface) CurrentCluster(ctx context.Context, cluster *biz.Cluster) (*biz.Cluster, error) {

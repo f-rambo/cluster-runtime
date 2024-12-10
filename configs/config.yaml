@@ -3,8 +3,8 @@ server:
   version: 0.0.1
   grpc:
     network: "tcp"
-    addr: 0.0.0.0:9001
-    timeout: 1
+    addr: 0.0.0.0:9003
+    timeout: 15
 log:
   max_size: 500
   max_backups: 3

@@ -39,6 +39,9 @@ func GetKubeClientByInCluster() (clientset *kubernetes.Clientset, err error) {
 }
 
 func GetKubeClientByRestConfig(masterIp, token, ca, key, cert string) (clientset *kubernetes.Clientset, err error) {
+	if masterIp == "" || token == "" || ca == "" || key == "" || cert == "" {
+		return nil, errors.New("invalid rest config")
+	}
 	config := &rest.Config{
 		Host:        masterIp + ":6443",
 		BearerToken: token,
@@ -51,6 +54,9 @@ func GetKubeClientByRestConfig(masterIp, token, ca, key, cert string) (clientset
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, errors.Wrap(err, "get kubernetes by rest config client failed")
+	}
+	if client == nil {
+		return nil, errors.New("get kubernetes by rest config client failed")
 	}
 	return client, nil
 }
