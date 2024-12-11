@@ -124,16 +124,16 @@ type User struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id          int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty" gorm:"column:id;primaryKey;AUTO_INCREMENT"`                                                        // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
-	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" gorm:"column:name; default:''; NOT NULL"`                                                     // @gotags: gorm:"column:name; default:''; NOT NULL"
-	Email       string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty" gorm:"column:email; default:''; NOT NULL"`                                                   // @gotags: gorm:"column:email; default:''; NOT NULL"
-	Password    string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty" gorm:"column:password; default:''; NOT NULL"`                                             // @gotags: gorm:"column:password; default:''; NOT NULL"
-	Status      UserStatus             `protobuf:"varint,5,opt,name=status,proto3,enum=biz.user.UserStatus" json:"status,omitempty" gorm:"column:status; default:''; NOT NULL"`                       // @gotags: gorm:"column:status; default:''; NOT NULL"
-	AccessToken string                 `protobuf:"bytes,6,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty" gorm:"-"`                    // @gotags: gorm:"-"`
-	SignType    UserSignType           `protobuf:"varint,7,opt,name=sign_type,json=signType,proto3,enum=biz.user.UserSignType" json:"sign_type,omitempty" gorm:"column:sign_type; default:''; NOT NULL"` // @gotags: gorm:"column:sign_type; default:''; NOT NULL"
-	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" gorm:"column:created_at; default:CURRENT_TIMESTAMP"`                          // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
-	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`                          // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-	DeletedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty" gorm:"column:deleted_at; default:NULL"`                         // @gotags: gorm:"column:deleted_at; default:NULL"
+	Id          int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                                        // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
+	Name        string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                     // @gotags: gorm:"column:name; default:''; NOT NULL"
+	Email       string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`                                                   // @gotags: gorm:"column:email; default:''; NOT NULL"
+	Password    string                 `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`                                             // @gotags: gorm:"column:password; default:''; NOT NULL"
+	Status      UserStatus             `protobuf:"varint,5,opt,name=status,proto3,enum=biz.user.UserStatus" json:"status,omitempty"`                       // @gotags: gorm:"column:status; default:''; NOT NULL"
+	AccessToken string                 `protobuf:"bytes,6,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`                    // @gotags: gorm:"-"`
+	SignType    UserSignType           `protobuf:"varint,7,opt,name=sign_type,json=signType,proto3,enum=biz.user.UserSignType" json:"sign_type,omitempty"` // @gotags: gorm:"column:sign_type; default:''; NOT NULL"
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`                          // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
+	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`                          // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+	DeletedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`                         // @gotags: gorm:"column:deleted_at; default:NULL"
 }
 
 func (x *User) Reset() {

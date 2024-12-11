@@ -121,12 +121,12 @@ type Workflow struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id        int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty" gorm:"column:id;primaryKey;AUTO_INCREMENT"`                               // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
-	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" gorm:"column:name; default:''; NOT NULL"`                            // @gotags: gorm:"column:name; default:''; NOT NULL"
-	Workflow  []byte                 `protobuf:"bytes,3,opt,name=workflow,proto3" json:"workflow,omitempty" gorm:"column:workflow; type:json"`                    // @gotags: gorm:"column:workflow; type:json"
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" gorm:"column:created_at; default:CURRENT_TIMESTAMP"` // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"` // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-	DeletedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty" gorm:"column:deleted_at; default:NULL"` // @gotags: gorm:"column:deleted_at; default:NULL"
+	Id        int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                               // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
+	Name      string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                            // @gotags: gorm:"column:name; default:''; NOT NULL"
+	Workflow  []byte                 `protobuf:"bytes,3,opt,name=workflow,proto3" json:"workflow,omitempty"`                    // @gotags: gorm:"column:workflow; type:json"
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"` // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+	DeletedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"` // @gotags: gorm:"column:deleted_at; default:NULL"
 }
 
 func (x *Workflow) Reset() {
@@ -208,18 +208,18 @@ type CI struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id          int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty" gorm:"column:id;primaryKey;AUTO_INCREMENT"`                                   // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
-	Version     string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty" gorm:"column:version; default:''; NOT NULL"`                          // @gotags: gorm:"column:version; default:''; NOT NULL"
-	Branch      string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty" gorm:"column:branch; default:''; NOT NULL"`                            // @gotags: gorm:"column:branch; default:''; NOT NULL"
-	Tag         string                 `protobuf:"bytes,4,opt,name=tag,proto3" json:"tag,omitempty" gorm:"column:tag; default:''; NOT NULL"`                                  // @gotags: gorm:"column:tag; default:''; NOT NULL"
-	Status      CIStatus               `protobuf:"varint,5,opt,name=status,proto3,enum=biz.service.CIStatus" json:"status,omitempty" gorm:"column:status; default:''; NOT NULL"` // @gotags: gorm:"column:status; default:''; NOT NULL"
-	Description string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty" gorm:"column:description; default:''; NOT NULL"`                  // @gotags: gorm:"column:description; default:''; NOT NULL"
-	ServiceId   int64                  `protobuf:"varint,7,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty" gorm:"column:service_id; default:0; NOT NULL"`    // @gotags: gorm:"column:service_id; default:0; NOT NULL"
-	UserId      int64                  `protobuf:"varint,8,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty" gorm:"column:user_id; default:0; NOT NULL"`             // @gotags: gorm:"column:user_id; default:0; NOT NULL"
-	Logs        string                 `protobuf:"bytes,9,opt,name=logs,proto3" json:"logs,omitempty" gorm:"-"`                                // @gotags: gorm:"-"
-	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" gorm:"column:created_at; default:CURRENT_TIMESTAMP"`    // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
-	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`    // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-	DeletedAt   *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty" gorm:"column:deleted_at; default:NULL"`    // @gotags: gorm:"column:deleted_at; default:NULL"
+	Id          int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                   // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
+	Version     string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`                          // @gotags: gorm:"column:version; default:''; NOT NULL"
+	Branch      string                 `protobuf:"bytes,3,opt,name=branch,proto3" json:"branch,omitempty"`                            // @gotags: gorm:"column:branch; default:''; NOT NULL"
+	Tag         string                 `protobuf:"bytes,4,opt,name=tag,proto3" json:"tag,omitempty"`                                  // @gotags: gorm:"column:tag; default:''; NOT NULL"
+	Status      CIStatus               `protobuf:"varint,5,opt,name=status,proto3,enum=biz.service.CIStatus" json:"status,omitempty"` // @gotags: gorm:"column:status; default:''; NOT NULL"
+	Description string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`                  // @gotags: gorm:"column:description; default:''; NOT NULL"
+	ServiceId   int64                  `protobuf:"varint,7,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`    // @gotags: gorm:"column:service_id; default:0; NOT NULL"
+	UserId      int64                  `protobuf:"varint,8,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`             // @gotags: gorm:"column:user_id; default:0; NOT NULL"
+	Logs        string                 `protobuf:"bytes,9,opt,name=logs,proto3" json:"logs,omitempty"`                                // @gotags: gorm:"-"
+	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`    // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
+	UpdatedAt   *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`    // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+	DeletedAt   *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`    // @gotags: gorm:"column:deleted_at; default:NULL"
 }
 
 func (x *CI) Reset() {
@@ -343,14 +343,14 @@ type CD struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id        int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty" gorm:"column:id;primaryKey;AUTO_INCREMENT"`                                // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
-	CiId      int64                  `protobuf:"varint,2,opt,name=ci_id,json=ciId,proto3" json:"ci_id,omitempty" gorm:"column:ci_id; default:0; NOT NULL"`                // @gotags: gorm:"column:ci_id; default:0; NOT NULL"
-	ServiceId int64                  `protobuf:"varint,3,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty" gorm:"column:service_id; default:0; NOT NULL"` // @gotags: gorm:"column:service_id; default:0; NOT NULL"
-	UserId    int64                  `protobuf:"varint,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty" gorm:"column:user_id; default:0; NOT NULL"`          // @gotags: gorm:"column:user_id; default:0; NOT NULL"
-	Logs      string                 `protobuf:"bytes,5,opt,name=logs,proto3" json:"logs,omitempty" gorm:"-"`                             // @gotags: gorm:"-"
-	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" gorm:"column:created_at; default:CURRENT_TIMESTAMP"`  // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
-	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`  // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-	DeletedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty" gorm:"column:deleted_at; default:NULL"`  // @gotags: gorm:"column:deleted_at; default:NULL"
+	Id        int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
+	CiId      int64                  `protobuf:"varint,2,opt,name=ci_id,json=ciId,proto3" json:"ci_id,omitempty"`                // @gotags: gorm:"column:ci_id; default:0; NOT NULL"
+	ServiceId int64                  `protobuf:"varint,3,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"` // @gotags: gorm:"column:service_id; default:0; NOT NULL"
+	UserId    int64                  `protobuf:"varint,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`          // @gotags: gorm:"column:user_id; default:0; NOT NULL"
+	Logs      string                 `protobuf:"bytes,5,opt,name=logs,proto3" json:"logs,omitempty"`                             // @gotags: gorm:"-"
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`  // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`  // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+	DeletedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`  // @gotags: gorm:"column:deleted_at; default:NULL"
 }
 
 func (x *CD) Reset() {
@@ -446,14 +446,14 @@ type Port struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty" gorm:"column:id;primaryKey;AUTO_INCREMENT"`                                            // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
-	IngressPath   string                 `protobuf:"bytes,2,opt,name=ingress_path,json=ingressPath,proto3" json:"ingress_path,omitempty" gorm:"column:ingress_path; default:''; NOT NULL"`        // @gotags: gorm:"column:ingress_path; default:''; NOT NULL"
-	Protocol      string                 `protobuf:"bytes,3,opt,name=protocol,proto3" json:"protocol,omitempty" gorm:"column:protocol; default:''; NOT NULL"`                                 // @gotags: gorm:"column:protocol; default:''; NOT NULL"
-	ContainerPort int32                  `protobuf:"varint,4,opt,name=container_port,json=containerPort,proto3" json:"container_port,omitempty" gorm:"column:container_port; default:0; NOT NULL"` // @gotags: gorm:"column:container_port; default:0; NOT NULL"
-	ServiceId     int64                  `protobuf:"varint,5,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty" gorm:"column:service_id; default:0; NOT NULL"`             // @gotags: gorm:"column:service_id; default:0; NOT NULL"
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" gorm:"column:created_at; default:CURRENT_TIMESTAMP"`              // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`              // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty" gorm:"column:deleted_at; default:NULL"`              // @gotags: gorm:"column:deleted_at; default:NULL"
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                            // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
+	IngressPath   string                 `protobuf:"bytes,2,opt,name=ingress_path,json=ingressPath,proto3" json:"ingress_path,omitempty"`        // @gotags: gorm:"column:ingress_path; default:''; NOT NULL"
+	Protocol      string                 `protobuf:"bytes,3,opt,name=protocol,proto3" json:"protocol,omitempty"`                                 // @gotags: gorm:"column:protocol; default:''; NOT NULL"
+	ContainerPort int32                  `protobuf:"varint,4,opt,name=container_port,json=containerPort,proto3" json:"container_port,omitempty"` // @gotags: gorm:"column:container_port; default:0; NOT NULL"
+	ServiceId     int64                  `protobuf:"varint,5,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`             // @gotags: gorm:"column:service_id; default:0; NOT NULL"
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`              // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`              // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+	DeletedAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`              // @gotags: gorm:"column:deleted_at; default:NULL"
 }
 
 func (x *Port) Reset() {
@@ -549,27 +549,27 @@ type Service struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id           int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty" gorm:"column:id;primaryKey;AUTO_INCREMENT"`                                            // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
-	Name         string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" gorm:"column:name; default:''; NOT NULL"`                                         // @gotags: gorm:"column:name; default:''; NOT NULL"
-	CodeRepo     string                 `protobuf:"bytes,3,opt,name=code_repo,json=codeRepo,proto3" json:"code_repo,omitempty" gorm:"column:code_repo; default:''; NOT NULL"`                 // @gotags: gorm:"column:code_repo; default:''; NOT NULL"
-	Replicas     int32                  `protobuf:"varint,4,opt,name=replicas,proto3" json:"replicas,omitempty" gorm:"column:replicas; default:0; NOT NULL"`                                // @gotags: gorm:"column:replicas; default:0; NOT NULL"
-	Cpu          float32                `protobuf:"fixed32,5,opt,name=cpu,proto3" json:"cpu,omitempty" gorm:"column:cpu; default:0; NOT NULL"`                                         // @gotags: gorm:"column:cpu; default:0; NOT NULL"
-	LimitCpu     float32                `protobuf:"fixed32,6,opt,name=limit_cpu,json=limitCpu,proto3" json:"limit_cpu,omitempty" gorm:"column:limit_cpu; default:0; NOT NULL"`               // @gotags: gorm:"column:limit_cpu; default:0; NOT NULL"
-	Gpu          float32                `protobuf:"fixed32,7,opt,name=gpu,proto3" json:"gpu,omitempty" gorm:"column:gpu; default:0; NOT NULL"`                                         // @gotags: gorm:"column:gpu; default:0; NOT NULL"
-	LimitGpu     float32                `protobuf:"fixed32,8,opt,name=limit_gpu,json=limitGpu,proto3" json:"limit_gpu,omitempty" gorm:"column:limit_gpu; default:0; NOT NULL"`               // @gotags: gorm:"column:limit_gpu; default:0; NOT NULL"
-	Memory       float32                `protobuf:"fixed32,9,opt,name=memory,proto3" json:"memory,omitempty" gorm:"column:memory; default:0; NOT NULL"`                                   // @gotags: gorm:"column:memory; default:0; NOT NULL"
-	LimitMemory  float32                `protobuf:"fixed32,10,opt,name=limit_memory,json=limitMemory,proto3" json:"limit_memory,omitempty" gorm:"column:limit_memory; default:0; NOT NULL"`     // @gotags: gorm:"column:limit_memory; default:0; NOT NULL"
-	Disk         float32                `protobuf:"fixed32,11,opt,name=disk,proto3" json:"disk,omitempty" gorm:"column:disk; default:0; NOT NULL"`                                      // @gotags: gorm:"column:disk; default:0; NOT NULL"
-	LimitDisk    float32                `protobuf:"fixed32,12,opt,name=limit_disk,json=limitDisk,proto3" json:"limit_disk,omitempty" gorm:"column:limit_disk; default:0; NOT NULL"`           // @gotags: gorm:"column:limit_disk; default:0; NOT NULL"
-	Business     string                 `protobuf:"bytes,13,opt,name=business,proto3" json:"business,omitempty" gorm:"column:business; default:''; NOT NULL"`                                // @gotags: gorm:"column:business; default:''; NOT NULL"
-	Technology   string                 `protobuf:"bytes,14,opt,name=technology,proto3" json:"technology,omitempty" gorm:"column:technology; default:''; NOT NULL"`                            // @gotags: gorm:"column:technology; default:''; NOT NULL"
-	Ports        []*Port                `protobuf:"bytes,15,rep,name=ports,proto3" json:"ports,omitempty" gorm:"-"`                                      // @gotags: gorm:"-"
-	ProjectId    int64                  `protobuf:"varint,16,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty" gorm:"column:project_id; default:0; NOT NULL"`            // @gotags: gorm:"column:project_id; default:0; NOT NULL"
-	CiWorkflowId int64                  `protobuf:"varint,18,opt,name=ci_workflow_id,json=ciWorkflowId,proto3" json:"ci_workflow_id,omitempty" gorm:"column:ci_workflow_id; default:0; NOT NULL"` // @gotags: gorm:"column:ci_workflow_id; default:0; NOT NULL"
-	CdWorkflowId int64                  `protobuf:"varint,19,opt,name=cd_workflow_id,json=cdWorkflowId,proto3" json:"cd_workflow_id,omitempty" gorm:"column:cd_workflow_id; default:0; NOT NULL"` // @gotags: gorm:"column:cd_workflow_id; default:0; NOT NULL"
-	CreatedAt    *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty" gorm:"column:created_at; default:CURRENT_TIMESTAMP"`             // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
-	UpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty" gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`             // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-	DeletedAt    *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty" gorm:"column:deleted_at; default:NULL"`             // @gotags: gorm:"column:deleted_at; default:NULL"
+	Id           int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`                                            // @gotags: gorm:"column:id;primaryKey;AUTO_INCREMENT"
+	Name         string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                         // @gotags: gorm:"column:name; default:''; NOT NULL"
+	CodeRepo     string                 `protobuf:"bytes,3,opt,name=code_repo,json=codeRepo,proto3" json:"code_repo,omitempty"`                 // @gotags: gorm:"column:code_repo; default:''; NOT NULL"
+	Replicas     int32                  `protobuf:"varint,4,opt,name=replicas,proto3" json:"replicas,omitempty"`                                // @gotags: gorm:"column:replicas; default:0; NOT NULL"
+	Cpu          float32                `protobuf:"fixed32,5,opt,name=cpu,proto3" json:"cpu,omitempty"`                                         // @gotags: gorm:"column:cpu; default:0; NOT NULL"
+	LimitCpu     float32                `protobuf:"fixed32,6,opt,name=limit_cpu,json=limitCpu,proto3" json:"limit_cpu,omitempty"`               // @gotags: gorm:"column:limit_cpu; default:0; NOT NULL"
+	Gpu          float32                `protobuf:"fixed32,7,opt,name=gpu,proto3" json:"gpu,omitempty"`                                         // @gotags: gorm:"column:gpu; default:0; NOT NULL"
+	LimitGpu     float32                `protobuf:"fixed32,8,opt,name=limit_gpu,json=limitGpu,proto3" json:"limit_gpu,omitempty"`               // @gotags: gorm:"column:limit_gpu; default:0; NOT NULL"
+	Memory       float32                `protobuf:"fixed32,9,opt,name=memory,proto3" json:"memory,omitempty"`                                   // @gotags: gorm:"column:memory; default:0; NOT NULL"
+	LimitMemory  float32                `protobuf:"fixed32,10,opt,name=limit_memory,json=limitMemory,proto3" json:"limit_memory,omitempty"`     // @gotags: gorm:"column:limit_memory; default:0; NOT NULL"
+	Disk         float32                `protobuf:"fixed32,11,opt,name=disk,proto3" json:"disk,omitempty"`                                      // @gotags: gorm:"column:disk; default:0; NOT NULL"
+	LimitDisk    float32                `protobuf:"fixed32,12,opt,name=limit_disk,json=limitDisk,proto3" json:"limit_disk,omitempty"`           // @gotags: gorm:"column:limit_disk; default:0; NOT NULL"
+	Business     string                 `protobuf:"bytes,13,opt,name=business,proto3" json:"business,omitempty"`                                // @gotags: gorm:"column:business; default:''; NOT NULL"
+	Technology   string                 `protobuf:"bytes,14,opt,name=technology,proto3" json:"technology,omitempty"`                            // @gotags: gorm:"column:technology; default:''; NOT NULL"
+	Ports        []*Port                `protobuf:"bytes,15,rep,name=ports,proto3" json:"ports,omitempty"`                                      // @gotags: gorm:"-"
+	ProjectId    int64                  `protobuf:"varint,16,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`            // @gotags: gorm:"column:project_id; default:0; NOT NULL"
+	CiWorkflowId int64                  `protobuf:"varint,18,opt,name=ci_workflow_id,json=ciWorkflowId,proto3" json:"ci_workflow_id,omitempty"` // @gotags: gorm:"column:ci_workflow_id; default:0; NOT NULL"
+	CdWorkflowId int64                  `protobuf:"varint,19,opt,name=cd_workflow_id,json=cdWorkflowId,proto3" json:"cd_workflow_id,omitempty"` // @gotags: gorm:"column:cd_workflow_id; default:0; NOT NULL"
+	CreatedAt    *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`             // @gotags: gorm:"column:created_at; default:CURRENT_TIMESTAMP"
+	UpdatedAt    *timestamppb.Timestamp `protobuf:"bytes,21,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`             // @gotags: gorm:"column:updated_at; default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+	DeletedAt    *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`             // @gotags: gorm:"column:deleted_at; default:NULL"
 }
 
 func (x *Service) Reset() {
