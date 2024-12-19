@@ -74,7 +74,7 @@ func (c *ClusterUsecase) CreateYAMLFile(ctx context.Context, dynamicClient *dyna
 }
 
 func (c *ClusterUsecase) CheckClusterInstalled(cluster *Cluster) error {
-	_, err := GetKubeClientByRestConfig(cluster.MasterIp, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
+	_, err := GetKubeClientByRestConfig(cluster.ApiServerAddress, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
 	if err != nil {
 		return ErrClusterNotFound
 	}
@@ -103,7 +103,7 @@ func (c *ClusterUsecase) CurrentCluster(ctx context.Context, cluster *Cluster) (
 }
 
 func (c *ClusterUsecase) HandlerNodes(ctx context.Context, cluster *Cluster) (*Cluster, error) {
-	clientset, err := GetKubeClientByRestConfig(cluster.MasterIp, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
+	clientset, err := GetKubeClientByRestConfig(cluster.ApiServerAddress, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
 	if err != nil {
 		return cluster, err
 	}
@@ -134,7 +134,7 @@ func (c *ClusterUsecase) HandlerNodes(ctx context.Context, cluster *Cluster) (*C
 }
 
 func (c *ClusterUsecase) MigrateToCluster(ctx context.Context, cluster *Cluster) (*Cluster, error) {
-	clientset, err := GetKubeClientByRestConfig(cluster.MasterIp, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
+	clientset, err := GetKubeClientByRestConfig(cluster.ApiServerAddress, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
 	if err != nil {
 		return cluster, err
 	}
@@ -303,10 +303,7 @@ func (c *ClusterUsecase) getNodes(ctx context.Context, clientSet *kubernetes.Cli
 				continue
 			}
 			if v.Type == "InternalIP" {
-				n.InternalIp = v.Address
-			}
-			if v.Type == "ExternalIP" {
-				n.ExternalIp = v.Address
+				n.Ip = v.Address
 			}
 		}
 		n.Status = NodeStatus_NODE_UNSPECIFIED
