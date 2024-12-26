@@ -306,7 +306,7 @@ func (c *ClusterUsecase) getNodes(ctx context.Context, clientSet *kubernetes.Cli
 				n.Ip = v.Address
 			}
 		}
-		n.Status = NodeStatus_NODE_UNSPECIFIED
+		n.Status = NodeStatus_NodeStatus_UNSPECIFIED
 		for _, v := range node.Status.Conditions {
 			if v.Status == corev1.ConditionStatus(corev1.NodeReady) {
 				n.Status = NodeStatus_NODE_RUNNING

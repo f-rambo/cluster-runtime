@@ -154,7 +154,7 @@ func loadReleasesInMemory(actionConfig *action.Configuration) {
 }
 
 func (h *HelmPkg) Write(p []byte) (n int, err error) {
-	h.Logf(string(p))
+	h.Logf("%s", string(p))
 	return len(p), nil
 }
 
