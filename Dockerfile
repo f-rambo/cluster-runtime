@@ -15,8 +15,7 @@ COPY --from=builder /app /app
 
 WORKDIR /app
 
-EXPOSE 8001
-EXPOSE 9001
+EXPOSE 9003
 VOLUME /data/conf
 
-CMD ["./bin/cluster-runtime", "-conf", "./configs/"]
+CMD ["./bin/cluster-runtime", "-conf", "./configs/config.yaml"]

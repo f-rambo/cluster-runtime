@@ -12,8 +12,7 @@ ENV CGO_ENABLED=1
 RUN mkdir -p /go/bin /go/src /go/pkg
 
 # Expose ports
-EXPOSE 8001
-EXPOSE 9001
+EXPOSE 9003
 
 # Set volume
 VOLUME [ "/go/src" ]

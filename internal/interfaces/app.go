@@ -35,10 +35,7 @@ func (a *AppInterface) UploadApp(ctx context.Context, req *appApi.FileUploadRequ
 	if filepath.Ext(req.GetFileName()) != fileExt {
 		return nil, errors.New("file type is not supported")
 	}
-	appPath, err := utils.GetServerStorePathByNames(utils.AppPackage)
-	if err != nil {
-		return nil, err
-	}
+	appPath := utils.GetServerStoragePathByNames(biz.AppPackage)
 	fileName, err := a.upload(appPath, req.GetFileName(), req.GetChunk())
 	if err != nil {
 		return nil, err

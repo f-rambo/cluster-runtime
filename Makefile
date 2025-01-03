@@ -59,7 +59,7 @@ docker-push:
 
 .PHONY: run
 run:
-	go run ./cmd/cluster-runtime -conf ./configs/
+	go run ./cmd/cluster-runtime -conf ./configs/config.yaml
 
 .PHONY: generate
 generate:

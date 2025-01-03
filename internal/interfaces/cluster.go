@@ -45,6 +45,6 @@ func (c *ClusterInterface) HandlerNodes(ctx context.Context, cluster *biz.Cluste
 	return c.uc.HandlerNodes(ctx, cluster)
 }
 
-func (c *ClusterInterface) MigrateToCluster(ctx context.Context, cluster *biz.Cluster) (*biz.Cluster, error) {
-	return c.uc.MigrateToCluster(ctx, cluster)
+func (c *ClusterInterface) StartCluster(ctx context.Context, cluster *biz.Cluster) (*biz.Cluster, error) {
+	return c.uc.StartCluster(ctx, cluster)
 }

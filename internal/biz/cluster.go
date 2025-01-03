@@ -133,7 +133,7 @@ func (c *ClusterUsecase) HandlerNodes(ctx context.Context, cluster *Cluster) (*C
 	return cluster, nil
 }
 
-func (c *ClusterUsecase) MigrateToCluster(ctx context.Context, cluster *Cluster) (*Cluster, error) {
+func (c *ClusterUsecase) StartCluster(ctx context.Context, cluster *Cluster) (*Cluster, error) {
 	clientset, err := GetKubeClientByRestConfig(cluster.ApiServerAddress, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
 	if err != nil {
 		return cluster, err

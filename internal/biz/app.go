@@ -19,6 +19,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const AppPackage string = "app"
+
 type AppUsecase struct {
 	log  *log.Helper
 	conf *conf.Bootstrap
@@ -66,14 +68,8 @@ func (a *AppUsecase) CheckCluster(_ context.Context) bool {
 
 // initialization
 func (a *AppUsecase) Init(ctx context.Context) ([]*App, []*AppRelease, error) {
-	appPath, err := utils.GetServerStorePathByNames(utils.AppPackage)
-	if err != nil {
-		return nil, nil, err
-	}
-	configPath, err := utils.GetServerStorePathByNames(utils.ConfigPackage)
-	if err != nil {
-		return nil, nil, err
-	}
+	appPath := utils.GetServerStoragePathByNames(AppPackage)
+	configPath := utils.GetFromContextByKey(ctx, utils.ConfDirKey)
 	apps := make([]*App, 0)
 	appReleases := make([]*AppRelease, 0)
 	confApps := a.conf.Apps
@@ -84,7 +80,7 @@ func (a *AppUsecase) Init(ctx context.Context) ([]*App, []*AppRelease, error) {
 		}
 		app := &App{Name: v.Name}
 		appVersion := &AppVersion{Chart: appchart, Version: v.Version}
-		err = a.GetAppAndVersionInfo(ctx, app, appVersion)
+		err := a.GetAppAndVersionInfo(ctx, app, appVersion)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -328,11 +324,8 @@ func (a *AppUsecase) GetAppsReouces(ctx context.Context, appRelease *AppRelease)
 }
 
 func (a *AppUsecase) DeleteApp(ctx context.Context, app *App) error {
-	appPath, err := utils.GetServerStorePathByNames(utils.AppPackage)
-	if err != nil {
-		return err
-	}
-	err = os.Remove(appPath)
+	appPath := utils.GetServerStoragePathByNames(AppPackage)
+	err := os.Remove(appPath)
 	if err != nil {
 		return err
 	}
@@ -340,17 +333,14 @@ func (a *AppUsecase) DeleteApp(ctx context.Context, app *App) error {
 }
 
 func (a *AppUsecase) DeleteAppVersion(ctx context.Context, app *App, appVersion *AppVersion) error {
-	appPath, err := utils.GetServerStorePathByNames(utils.AppPackage)
-	if err != nil {
-		return err
-	}
+	appPath := utils.GetServerStoragePathByNames(AppPackage)
 	for _, v := range app.Versions {
 		if v.Chart == "" || appVersion.Id != v.Id {
 			continue
 		}
 		chartPath := filepath.Join(appPath, v.Chart)
 		if utils.IsFileExist(chartPath) {
-			err = os.Remove(chartPath)
+			err := os.Remove(chartPath)
 			if err != nil {
 				return err
 			}
@@ -389,10 +379,7 @@ func (a *AppUsecase) AppRelease(ctx context.Context, app *App, appVersion *AppVe
 		return err
 	}
 	if appRepo != nil && appVersion.Chart == "" {
-		appPath, err := utils.GetServerStorePathByNames(utils.AppPackage)
-		if err != nil {
-			return err
-		}
+		appPath := utils.GetServerStoragePathByNames(AppPackage)
 		pullClient, err := helmPkg.NewPull()
 		if err != nil {
 			return err
@@ -461,10 +448,7 @@ func (a *AppUsecase) AddAppRepo(ctx context.Context, repo *AppRepo) error {
 	if err != nil {
 		return err
 	}
-	res.CachePath, err = utils.GetServerStorePathByNames(utils.AppPackage)
-	if err != nil {
-		return err
-	}
+	res.CachePath = utils.GetServerStoragePathByNames(AppPackage)
 	indexFile, err := res.DownloadIndexFile()
 	if err != nil {
 		return err
