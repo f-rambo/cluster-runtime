@@ -37,6 +37,19 @@ const (
 	NodeLableKey         ClusterRuntimeConfigMapKey = "node-lable"
 )
 
+func (c *Cluster) GetNodeGroup(nodeGroupId string) *NodeGroup {
+	for _, nodeGroup := range c.NodeGroups {
+		if nodeGroup.Id == nodeGroupId {
+			return nodeGroup
+		}
+	}
+	return nil
+}
+
+func (ng *NodeGroup) SetTargetSize(size int32) {
+	ng.TargetSize = size
+}
+
 type ClusterUsecase struct {
 	log *log.Helper
 }

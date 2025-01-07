@@ -5,7 +5,6 @@ import (
 
 	appApi "github.com/f-rambo/cloud-copilot/cluster-runtime/api/app"
 	cluster "github.com/f-rambo/cloud-copilot/cluster-runtime/api/cluster"
-	logApi "github.com/f-rambo/cloud-copilot/cluster-runtime/api/log"
 	projectApi "github.com/f-rambo/cloud-copilot/cluster-runtime/api/project"
 	serviceApi "github.com/f-rambo/cloud-copilot/cluster-runtime/api/service"
 	userApi "github.com/f-rambo/cloud-copilot/cluster-runtime/api/user"
@@ -18,7 +17,6 @@ import (
 
 // NewGRPCServer new a gRPC server.
 func NewGRPCServer(c *conf.Server,
-	logInterface *interfaces.LogInterface,
 	clusterInterface *interfaces.ClusterInterface,
 	appInterface *interfaces.AppInterface,
 	projectInterface *interfaces.ProjectInterface,
@@ -41,7 +39,6 @@ func NewGRPCServer(c *conf.Server,
 	}
 	srv := grpc.NewServer(opts...)
 	cluster.RegisterClusterInterfaceServer(srv, clusterInterface)
-	logApi.RegisterLogInterfaceServer(srv, logInterface)
 	appApi.RegisterAppInterfaceServer(srv, appInterface)
 	projectApi.RegisterProjectInterfaceServer(srv, projectInterface)
 	serviceApi.RegisterServiceInterfaceServer(srv, serviceInterface)
