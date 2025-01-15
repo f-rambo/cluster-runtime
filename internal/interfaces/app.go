@@ -92,12 +92,15 @@ func (a *AppInterface) CheckCluster(ctx context.Context, _ *emptypb.Empty) (*app
 	return &appApi.CheckClusterResponse{Ok: ok}, nil
 }
 
-func (a *AppInterface) Init(ctx context.Context, _ *emptypb.Empty) (*appApi.InitResponse, error) {
-	apps, appReleases, err := a.appUC.Init(ctx)
+func (a *AppInterface) InstallBasicComponent(ctx context.Context, param *appApi.InstallBasicComponentReq) (*appApi.InstallBasicComponentResponse, error) {
+	if param.BasicComponentAppType == 0 {
+		return nil, errors.New("basic component app type is empty")
+	}
+	apps, appReleases, err := a.appUC.InstallBasicComponent(ctx, param.BasicComponentAppType)
 	if err != nil {
 		return nil, err
 	}
-	appItems := &appApi.InitResponse{Apps: apps, Releases: appReleases}
+	appItems := &appApi.InstallBasicComponentResponse{Apps: apps, Releases: appReleases}
 	return appItems, nil
 }
 

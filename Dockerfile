@@ -7,7 +7,7 @@ ENV GO111MODULE=on
 ENV GOPROXY=https://goproxy.cn
 ENV GOPRIVATE=github.com/f-rambo/
 
-RUN make build && mkdir -p /app && cp -r bin /app/ && cp -r configs /app/
+RUN make build && mkdir -p /app && cp -r bin configs /app/
 
 FROM debian:stable-slim
 
@@ -16,6 +16,7 @@ COPY --from=builder /app /app
 WORKDIR /app
 
 EXPOSE 9003
-VOLUME /data/conf
 
-CMD ["./bin/cluster-runtime", "-conf", "./configs/config.yaml"]
+VOLUME /app/configs
+
+CMD ["bin/cluster-runtime", "-conf", "configs"]

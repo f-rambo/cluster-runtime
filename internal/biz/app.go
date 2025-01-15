@@ -66,14 +66,16 @@ func (a *AppUsecase) CheckCluster(_ context.Context) bool {
 	return err == nil
 }
 
-// initialization
-func (a *AppUsecase) Init(ctx context.Context) ([]*App, []*AppRelease, error) {
+func (a *AppUsecase) InstallBasicComponent(ctx context.Context, basicAppType BasicComponentAppType) ([]*App, []*AppRelease, error) {
 	appPath := utils.GetServerStoragePathByNames(AppPackage)
 	configPath := utils.GetFromContextByKey(ctx, utils.ConfDirKey)
 	apps := make([]*App, 0)
 	appReleases := make([]*AppRelease, 0)
 	confApps := a.conf.Apps
 	for _, v := range confApps {
+		if strings.ToUpper(v.Type) != basicAppType.String() {
+			continue
+		}
 		appchart := fmt.Sprintf("%s/%s-%s.tgz", appPath, v.Name, v.Version)
 		if !utils.IsFileExist(appchart) {
 			return nil, nil, fmt.Errorf("appchart not found: %s", appchart)
@@ -98,9 +100,9 @@ func (a *AppUsecase) Init(ctx context.Context) ([]*App, []*AppRelease, error) {
 			ReleaseName: fmt.Sprintf("%s-%s", v.Name, v.Version),
 			AppId:       app.Id,
 			VersionId:   appVersion.Id,
-			Namespace:   v.Namespace,
+			Namespace:   a.conf.Server.Namespace,
 			Config:      appVersion.DefaultConfig,
-			Status:      AppReleaseSatus_APP_RELEASE_PENDING,
+			Status:      AppReleaseSatus_PENDING,
 			Wait:        true,
 		}
 		appReleases = append(appReleases, appRelease)
@@ -407,12 +409,12 @@ func (a *AppUsecase) AppRelease(ctx context.Context, app *App, appVersion *AppVe
 		appRelease.ReleaseName = release.Name
 		appRelease.Manifest = strings.TrimSpace(release.Manifest)
 		if release.Info != nil {
-			appRelease.Status = AppReleaseSatus_APP_RELEASE_RUNNING
+			appRelease.Status = AppReleaseSatus_RUNNING
 			appRelease.Notes = release.Info.Notes
 		}
 		return nil
 	}
-	appRelease.Status = AppReleaseSatus_APP_RELEASE_FAILED
+	appRelease.Status = AppReleaseSatus_FAILED
 	return nil
 }
 func (a *AppUsecase) DeleteAppRelease(ctx context.Context, appRelease *AppRelease) error {
@@ -433,7 +435,7 @@ func (a *AppUsecase) DeleteAppRelease(ctx context.Context, appRelease *AppReleas
 		return errors.WithMessage(err, "uninstall fail")
 	}
 	if resp != nil && resp.Release != nil && resp.Release.Info != nil {
-		appRelease.Status = AppReleaseSatus_APP_RELEASE_RUNNING
+		appRelease.Status = AppReleaseSatus_RUNNING
 	}
 	appRelease.Notes = resp.Info
 	return nil
@@ -465,8 +467,6 @@ func (a *AppUsecase) GetAppsByRepo(ctx context.Context, repo *AppRepo) ([]*App, 
 	apps := make([]*App, 0)
 	for chartName, chartVersions := range index.Entries {
 		app := &App{Name: chartName, AppRepoId: repo.Id, Versions: make([]*AppVersion, 0)}
-		app.CreatedAt = repo.CreatedAt
-		app.UpdatedAt = repo.UpdatedAt
 		for _, chartMatedata := range chartVersions {
 			if len(chartMatedata.URLs) == 0 {
 				return nil, errors.New("chart urls is empty")

@@ -1,11 +1,14 @@
 package utils
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"google.golang.org/protobuf/proto"
 )
 
 func GetServerStoragePathByNames(packageNames ...string) string {
@@ -90,4 +93,20 @@ func MergePath(paths ...string) string {
 		pathArr = append(pathArr, strings.Split(path, "/")...)
 	}
 	return strings.Join(pathArr, "/")
+}
+
+func SerializeToBase64(msg proto.Message) (string, error) {
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func DeserializeFromBase64(data string, msg proto.Message) error {
+	decoded, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(decoded, msg)
 }

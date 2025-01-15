@@ -39,7 +39,7 @@ internal:
 
 .PHONY: build
 build:
-	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./cmd/cluster-runtime
+	mkdir -p bin/ && go build -ldflags "-X main.Version=$(VERSION)" -o ./bin/ ./cmd/$(SERVER_NAME)
 
 .PHONY: docker-build
 docker-build:
@@ -59,12 +59,12 @@ docker-push:
 
 .PHONY: run
 run:
-	go run ./cmd/cluster-runtime -conf ./configs/config.yaml
+	go run ./cmd/$(SERVER_NAME) -conf ./configs
 
 .PHONY: generate
 generate:
 	go mod tidy
-	@cd cmd/cluster-runtime && wire && cd -
+	@cd cmd/$(SERVER_NAME) && wire && cd -
 
 .PHONY: multi-platform-build
 multi-platform-build:

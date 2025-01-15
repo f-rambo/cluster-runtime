@@ -2,21 +2,17 @@ package biz
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/f-rambo/cloud-copilot/cluster-runtime/utils"
 	"github.com/go-kratos/kratos/v2/log"
 	"github.com/pkg/errors"
-	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
@@ -32,6 +28,8 @@ func (k ClusterRuntimeConfigMapKey) String() string {
 }
 
 const (
+	CloudCopilotNamespace = "cloud-copilot"
+
 	ClusterInformation   ClusterRuntimeConfigMapKey = "cluster-info"
 	NodegroupInformation ClusterRuntimeConfigMapKey = "nodegroup-info"
 	NodeLableKey         ClusterRuntimeConfigMapKey = "node-lable"
@@ -99,11 +97,6 @@ func (c *ClusterUsecase) CurrentCluster(ctx context.Context, cluster *Cluster) (
 	if err != nil {
 		return cluster, ErrClusterNotFound
 	}
-	versionInfo, err := kubeClient.Discovery().ServerVersion()
-	if err != nil {
-		return cluster, err
-	}
-	cluster.Version = versionInfo.String()
 	err = c.getClusterInfo(ctx, kubeClient, cluster)
 	if err != nil {
 		return cluster, err
@@ -146,149 +139,16 @@ func (c *ClusterUsecase) HandlerNodes(ctx context.Context, cluster *Cluster) (*C
 	return cluster, nil
 }
 
-func (c *ClusterUsecase) StartCluster(ctx context.Context, cluster *Cluster) (*Cluster, error) {
-	clientset, err := GetKubeClientByRestConfig(cluster.ApiServerAddress, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
-	if err != nil {
-		return cluster, err
-	}
-	serverName := "cloud-copilot"
-	labels := map[string]string{"app.kubernetes.io/cluster.name": cluster.Name, "app.kubernetes.io/name": serverName}
-	namspaceObj, err := clientset.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   serverName,
-			Labels: labels,
-		},
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return cluster, err
-	}
-	serviceAccountObj, err := clientset.CoreV1().ServiceAccounts(namspaceObj.Namespace).Create(ctx, &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-app-service-account", serverName),
-			Namespace: namspaceObj.Namespace,
-			Labels:    labels,
-		},
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return cluster, err
-	}
-	_, err = clientset.RbacV1().ClusterRoleBindings().Create(ctx, &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   fmt.Sprintf("%s-app-cluster-admin-binding", serverName),
-			Labels: labels,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      serviceAccountObj.Name,
-				Namespace: serviceAccountObj.Namespace,
-			},
-		},
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return cluster, err
-	}
-	var replicas int32 = 1
-	cloudCopilotPodSpec := corev1.PodSpec{
-		ServiceAccountName: serviceAccountObj.Name,
-		HostNetwork:        true,
-		Containers: []corev1.Container{
-			{
-				Name:  fmt.Sprintf("%s-app-container", serverName),
-				Image: "frambo/cloud-copilot:v0.0.1",
-				Env:   []corev1.EnvVar{},
-				Ports: []corev1.ContainerPort{
-					{ContainerPort: 8000},
-					{ContainerPort: 9000},
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("100m"),
-						corev1.ResourceMemory: resource.MustParse("128Mi"),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("500m"),
-						corev1.ResourceMemory: resource.MustParse("256Mi"),
-					},
-				},
-			},
-		},
-	}
-	deploymentObj, err := clientset.AppsV1().Deployments(namspaceObj.Namespace).Create(ctx, &appv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-app-deployment", serverName),
-			Namespace: namspaceObj.Namespace,
-		},
-		Spec: appv1.DeploymentSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: cloudCopilotPodSpec,
-			},
-		},
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return cluster, err
-	}
-	c.log.Info(deploymentObj.Name)
-	_, err = clientset.CoreV1().Services(namspaceObj.Namespace).Create(ctx, &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-app-service", serverName),
-			Namespace: namspaceObj.Namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:         corev1.ServiceTypeExternalName,
-			ExternalName: fmt.Sprintf("%s.%s.com", serverName, cluster.Name),
-			Ports: []corev1.ServicePort{
-				{
-					Port:       8000,
-					TargetPort: intstr.FromInt(8000),
-				},
-				{
-					Port:       9000,
-					TargetPort: intstr.FromInt(9000),
-				},
-			},
-			Selector: labels,
-		},
-		Status: corev1.ServiceStatus{},
-	}, metav1.CreateOptions{})
-	if err != nil {
-		return cluster, err
-	}
-	return cluster, nil
-}
-
 func (c *ClusterUsecase) getClusterInfo(ctx context.Context, clientSet *kubernetes.Clientset, cluster *Cluster) error {
-	configMap, err := clientSet.CoreV1().ConfigMaps("kube-system").Get(ctx, ClusterInformation.String(), metav1.GetOptions{})
+	configMap, err := clientSet.CoreV1().ConfigMaps(CloudCopilotNamespace).Get(ctx, ClusterInformation.String(), metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	if _, ok := configMap.Data[ClusterInformation.String()]; !ok {
+	clusterInfoString, ok := configMap.Data[ClusterInformation.String()]
+	if !ok {
 		return nil
 	}
-	err = json.Unmarshal([]byte(configMap.Data[ClusterInformation.String()]), cluster)
+	err = utils.DeserializeFromBase64(clusterInfoString, cluster)
 	if err != nil {
 		return err
 	}
@@ -310,7 +170,6 @@ func (c *ClusterUsecase) getNodes(ctx context.Context, clientSet *kubernetes.Cli
 				break
 			}
 		}
-		n.Name = node.Name
 		for _, v := range node.Status.Addresses {
 			if v.Address == "" {
 				continue
@@ -319,21 +178,11 @@ func (c *ClusterUsecase) getNodes(ctx context.Context, clientSet *kubernetes.Cli
 				n.Ip = v.Address
 			}
 		}
-		n.Status = NodeStatus_NodeStatus_UNSPECIFIED
 		for _, v := range node.Status.Conditions {
 			if v.Status == corev1.ConditionStatus(corev1.NodeReady) {
 				n.Status = NodeStatus_NODE_RUNNING
 			}
 		}
-		nodeLables, err := json.Marshal(node)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(nodeLables, &n)
-		if err != nil {
-			return err
-		}
-		n.Labels = string(nodeLables)
 		if clusterNodeIndex == -1 {
 			cluster.Nodes = append(cluster.Nodes, n)
 		} else {

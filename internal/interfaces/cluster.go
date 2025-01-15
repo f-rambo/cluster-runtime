@@ -44,7 +44,3 @@ func (c *ClusterInterface) CurrentCluster(ctx context.Context, cluster *biz.Clus
 func (c *ClusterInterface) HandlerNodes(ctx context.Context, cluster *biz.Cluster) (*biz.Cluster, error) {
 	return c.uc.HandlerNodes(ctx, cluster)
 }
-
-func (c *ClusterInterface) StartCluster(ctx context.Context, cluster *biz.Cluster) (*biz.Cluster, error) {
-	return c.uc.StartCluster(ctx, cluster)
-}
