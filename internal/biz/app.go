@@ -21,14 +21,17 @@ import (
 
 const AppPackage string = "app"
 
+const SystemNamespace string = "cloud-copilot"
+
 type AppUsecase struct {
 	log  *log.Helper
 	conf *conf.Bootstrap
 }
 
-func NewAppUseCase(logger log.Logger) *AppUsecase {
+func NewAppUseCase(conf *conf.Bootstrap, logger log.Logger) *AppUsecase {
 	a := &AppUsecase{
-		log: log.NewHelper(logger),
+		conf: conf,
+		log:  log.NewHelper(logger),
 	}
 	return a
 }
@@ -66,9 +69,13 @@ func (a *AppUsecase) CheckCluster(_ context.Context) bool {
 	return err == nil
 }
 
+func (a *AppUsecase) GetAppConfigPath(appName, appVersionNumber string) string {
+	appPath := utils.GetServerStoragePathByNames(AppPackage)
+	return fmt.Sprintf("%s/%s-%s.yaml", appPath, appName, appVersionNumber)
+}
+
 func (a *AppUsecase) InstallBasicComponent(ctx context.Context, basicAppType BasicComponentAppType) ([]*App, []*AppRelease, error) {
 	appPath := utils.GetServerStoragePathByNames(AppPackage)
-	configPath := utils.GetFromContextByKey(ctx, utils.ConfDirKey)
 	apps := make([]*App, 0)
 	appReleases := make([]*AppRelease, 0)
 	confApps := a.conf.Apps
@@ -78,7 +85,7 @@ func (a *AppUsecase) InstallBasicComponent(ctx context.Context, basicAppType Bas
 		}
 		appchart := fmt.Sprintf("%s/%s-%s.tgz", appPath, v.Name, v.Version)
 		if !utils.IsFileExist(appchart) {
-			return nil, nil, fmt.Errorf("appchart not found: %s", appchart)
+			return nil, nil, errors.Errorf("appchart not found: %s", appchart)
 		}
 		app := &App{Name: v.Name}
 		appVersion := &AppVersion{Chart: appchart, Version: v.Version}
@@ -88,24 +95,33 @@ func (a *AppUsecase) InstallBasicComponent(ctx context.Context, basicAppType Bas
 		}
 		app.AddVersion(appVersion)
 		apps = append(apps, app)
-		appConfigPath := fmt.Sprintf("%s/%s-%s.yaml", configPath, v.Name, v.Version)
+		appConfigPath := a.GetAppConfigPath(app.Name, appVersion.Version)
 		if utils.IsFileExist(appConfigPath) {
 			appConfig, err := os.ReadFile(appConfigPath)
 			if err != nil {
 				return nil, nil, err
 			}
 			appVersion.DefaultConfig = string(appConfig)
+		} else {
+			err = utils.WriteFile(appConfigPath, appVersion.DefaultConfig)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 		appRelease := &AppRelease{
 			ReleaseName: fmt.Sprintf("%s-%s", v.Name, v.Version),
+			Namespace:   SystemNamespace,
 			AppId:       app.Id,
 			VersionId:   appVersion.Id,
-			Namespace:   a.conf.Server.Namespace,
 			Config:      appVersion.DefaultConfig,
-			Status:      AppReleaseSatus_PENDING,
+			Status:      AppReleaseSatus_BAppReleaseSatus_UNSPECIFIED,
 			Wait:        true,
 		}
 		appReleases = append(appReleases, appRelease)
+		err = a.AppRelease(ctx, app, appVersion, appRelease, nil)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	return apps, appReleases, nil
 }

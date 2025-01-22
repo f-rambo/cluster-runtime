@@ -22,10 +22,10 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, logger log.Logger) (*kratos.App, func(), error) {
+func wireApp(bootstrap *conf.Bootstrap, logger log.Logger) (*kratos.App, func(), error) {
 	clusterUsecase := biz.NewClusterUseCase(logger)
 	clusterInterface := interfaces.NewClusterInterface(clusterUsecase, logger)
-	appUsecase := biz.NewAppUseCase(logger)
+	appUsecase := biz.NewAppUseCase(bootstrap, logger)
 	appInterface := interfaces.NewAppInterface(appUsecase, logger)
 	projectUseCase := biz.NewProjectUseCase(logger)
 	projectInterface := interfaces.NewProjectInterface(projectUseCase, logger)
@@ -33,7 +33,7 @@ func wireApp(confServer *conf.Server, logger log.Logger) (*kratos.App, func(), e
 	serviceInterface := interfaces.NewServiceInterface(serviceUseCase)
 	userUseCase := biz.NewUserUseCase(logger)
 	userInterface := interfaces.NewUserInterface(userUseCase)
-	grpcServer := server.NewGRPCServer(confServer, clusterInterface, appInterface, projectInterface, serviceInterface, userInterface, logger)
+	grpcServer := server.NewGRPCServer(bootstrap, clusterInterface, appInterface, projectInterface, serviceInterface, userInterface, logger)
 	app := newApp(logger, grpcServer)
 	return app, func() {
 	}, nil

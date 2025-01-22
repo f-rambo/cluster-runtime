@@ -66,7 +66,7 @@ func main() {
 		panic(err)
 	}
 
-	var bc conf.Bootstrap
+	var bc *conf.Bootstrap
 	if err := c.Scan(&bc); err != nil {
 		panic(err)
 	}
@@ -78,11 +78,11 @@ func main() {
 		panic("name or version is empty")
 	}
 
-	utilLogger := utils.NewLog(&bc)
+	utilLogger := utils.NewLog(bc)
 	defer utilLogger.Close()
 	logger := log.With(utilLogger, utils.GetLogContenteKeyvals()...)
 
-	app, cleanup, err := wireApp(bc.Server, logger)
+	app, cleanup, err := wireApp(bc, logger)
 	if err != nil {
 		panic(err)
 	}

@@ -16,7 +16,7 @@ import (
 )
 
 // NewGRPCServer new a gRPC server.
-func NewGRPCServer(c *conf.Server,
+func NewGRPCServer(c *conf.Bootstrap,
 	clusterInterface *interfaces.ClusterInterface,
 	appInterface *interfaces.AppInterface,
 	projectInterface *interfaces.ProjectInterface,
@@ -28,14 +28,14 @@ func NewGRPCServer(c *conf.Server,
 			recovery.Recovery(),
 		),
 	}
-	if c.Grpc.Network != "" {
-		opts = append(opts, grpc.Network(c.Grpc.Network))
+	if c.Server.Grpc.GetNetwork() != "" {
+		opts = append(opts, grpc.Network(c.Server.Grpc.GetNetwork()))
 	}
-	if c.Grpc.Addr != "" {
-		opts = append(opts, grpc.Address(c.Grpc.Addr))
+	if c.Server.Grpc.GetAddr() != "" {
+		opts = append(opts, grpc.Address(c.Server.Grpc.GetAddr()))
 	}
-	if c.Grpc.Timeout != 0 {
-		opts = append(opts, grpc.Timeout(time.Duration(c.Grpc.Timeout)*time.Second))
+	if c.Server.Grpc.GetTimeout() != 0 {
+		opts = append(opts, grpc.Timeout(time.Duration(c.Server.Grpc.GetTimeout())*time.Second))
 	}
 	srv := grpc.NewServer(opts...)
 	cluster.RegisterClusterInterfaceServer(srv, clusterInterface)

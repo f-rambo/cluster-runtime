@@ -11,6 +11,9 @@ log:
   max_backups: 3
   max_age: 28
 app:
+  - name: cilium
+    version: "1.16.5"
+    type: networking
   - name: base
     version: "1.24.0"
     type: networking
@@ -23,18 +26,12 @@ app:
   - name: ztunnel
     version: "1.24.0"
     type: networking
-  - name: gateway
-    version: "1.24.0"
+  - name: traefik
+    version: "34.1.0"
     type: networking
-  - name: postgresql
-    version: "15.1"
-    type: database
   - name: argo-workflows
     version: "0.42.7"
-    type: toolkit
-  - name: cluster-autoscaler
-    version: "9.43.2"
-    type: toolkit
+    type: building
   - name: prometheus
     version: "25.30.1"
     type: monitoring
@@ -47,3 +44,6 @@ app:
   - name: rook-ceph-cluster
     version: "v1.15.5"
     type: storage
+  - name: cluster-autoscaler
+    version: "9.43.2"
+    type: scheduling

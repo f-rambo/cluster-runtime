@@ -23,6 +23,18 @@ func IsFileExist(path string) bool {
 	return err == nil || os.IsExist(err)
 }
 
+func WriteFile(filePath, content string) error {
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open or create file: %w", err)
+	}
+	defer file.Close()
+	if _, err := io.WriteString(file, content); err != nil {
+		return fmt.Errorf("failed to write to file: %w", err)
+	}
+	return nil
+}
+
 func Contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
