@@ -15,35 +15,29 @@ app:
     version: "1.16.5"
     type: networking
   - name: base
-    version: "1.24.0"
+    version: "1.24.2"
     type: networking
   - name: istiod
-    version: "1.24.0"
+    version: "1.24.2"
     type: networking
   - name: cni
-    version: "1.24.0"
+    version: "1.24.2"
     type: networking
   - name: ztunnel
-    version: "1.24.0"
+    version: "1.24.2"
     type: networking
   - name: traefik
     version: "34.1.0"
     type: networking
   - name: argo-workflows
-    version: "0.42.7"
+    version: "0.45.4"
     type: building
-  - name: prometheus
-    version: "25.30.1"
-    type: monitoring
-  - name: grafana
-    version: "8.6.0"
+  - name: kube-prometheus-stack
+    version: "69.1.1"
     type: monitoring
   - name: rook-ceph
-    version: "v1.15.5"
-    type: storage
-  - name: rook-ceph-cluster
-    version: "v1.15.5"
+    version: "v1.16.3"
     type: storage
   - name: cluster-autoscaler
-    version: "9.43.2"
+    version: "9.46.0"
     type: scheduling

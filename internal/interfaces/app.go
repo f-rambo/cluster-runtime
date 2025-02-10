@@ -104,26 +104,12 @@ func (a *AppInterface) InstallBasicComponent(ctx context.Context, param *appApi.
 	return appItems, nil
 }
 
-func (a *AppInterface) GetClusterResources(ctx context.Context, appRelease *biz.AppRelease) (*appApi.AppReleaseResourceItems, error) {
-	resources := make([]*biz.AppReleaseResource, 0)
-	appReleaseResources, err := a.appUC.GetAppsReouces(ctx, appRelease)
+func (a *AppInterface) GetAppReleaseResources(ctx context.Context, appRelease *biz.AppRelease) (*appApi.AppReleaseResourceItems, error) {
+	appReleaseResources, err := a.appUC.GetAppReleaseResources(ctx, appRelease)
 	if err != nil {
 		return nil, err
 	}
-	netResources, err := a.appUC.GetNetResouces(ctx, appRelease)
-	if err != nil {
-		return nil, err
-	}
-	podResources, err := a.appUC.GetPodResources(ctx, appRelease)
-	if err != nil {
-		return nil, err
-	}
-	resources = append(resources, appReleaseResources...)
-	resources = append(resources, netResources...)
-	resources = append(resources, podResources...)
-	appRelease.Resources = resources
-	appReleaseResourceItems := &appApi.AppReleaseResourceItems{Resources: resources}
-	return appReleaseResourceItems, nil
+	return &appApi.AppReleaseResourceItems{Resources: appReleaseResources}, nil
 }
 
 func (a *AppInterface) DeleteApp(ctx context.Context, app *biz.App) (*common.Msg, error) {
@@ -149,9 +135,20 @@ func (a *AppInterface) AppRelease(ctx context.Context, appRelease *appApi.AppRel
 	return appRelease.Release, err
 }
 
-func (a *AppInterface) DeleteAppRelease(ctx context.Context, appRelease *biz.AppRelease) (*biz.AppRelease, error) {
+func (a *AppInterface) ReloadAppReleaseResource(ctx context.Context, appReleaseResource *biz.AppReleaseResource) (*common.Msg, error) {
+	err := a.appUC.ReloadAppReleaseResource(ctx, appReleaseResource)
+	if err != nil {
+		return nil, err
+	}
+	return common.Response(), nil
+}
+
+func (a *AppInterface) DeleteAppRelease(ctx context.Context, appRelease *biz.AppRelease) (*common.Msg, error) {
 	err := a.appUC.DeleteAppRelease(ctx, appRelease)
-	return appRelease, err
+	if err != nil {
+		return nil, err
+	}
+	return common.Response(), nil
 }
 
 func (a *AppInterface) AddAppRepo(ctx context.Context, appRepo *biz.AppRepo) (*biz.AppRepo, error) {

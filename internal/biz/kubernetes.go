@@ -8,9 +8,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func GetKubeClientByKubeConfig(KubeConfigPath string) (clientset *kubernetes.Clientset, err error) {
-	if KubeConfigPath == "" {
+func GetKubeClientByKubeConfig(KubeConfigPaths ...string) (clientset *kubernetes.Clientset, err error) {
+	var KubeConfigPath string
+	if len(KubeConfigPaths) == 0 {
 		KubeConfigPath = clientcmd.RecommendedHomeFile
+	} else {
+		KubeConfigPath = KubeConfigPaths[0]
 	}
 	config, err := clientcmd.BuildConfigFromFlags("", KubeConfigPath)
 	if err != nil {

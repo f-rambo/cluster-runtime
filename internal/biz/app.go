@@ -11,17 +11,31 @@ import (
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/conf"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/utils"
 	"github.com/go-kratos/kratos/v2/log"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/spf13/cast"
 	"helm.sh/helm/v3/pkg/cli"
+	helmValues "helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/getter"
 	helmrepo "helm.sh/helm/v3/pkg/repo"
+	coreV1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 )
 
-const AppPackage string = "app"
+const (
+	AppPackage string = "apps"
 
-const SystemNamespace string = "cloud-copilot"
+	SystemNamespace string = "cloud-copilot"
+
+	DaemonSet   string = "DaemonSet"
+	Deployment  string = "Deployment"
+	StatefulSet string = "StatefulSet"
+	ReplicaSet  string = "ReplicaSet"
+	CronJob     string = "CronJob"
+	Job         string = "Job"
+	Pod         string = "Pod"
+)
 
 type AppUsecase struct {
 	log  *log.Helper
@@ -96,249 +110,23 @@ func (a *AppUsecase) InstallBasicComponent(ctx context.Context, basicAppType Bas
 		app.AddVersion(appVersion)
 		apps = append(apps, app)
 		appConfigPath := a.GetAppConfigPath(app.Name, appVersion.Version)
-		if utils.IsFileExist(appConfigPath) {
-			appConfig, err := os.ReadFile(appConfigPath)
-			if err != nil {
-				return nil, nil, err
-			}
-			appVersion.DefaultConfig = string(appConfig)
-		} else {
+		if !utils.IsFileExist(appConfigPath) {
 			err = utils.WriteFile(appConfigPath, appVersion.DefaultConfig)
 			if err != nil {
 				return nil, nil, err
 			}
 		}
 		appRelease := &AppRelease{
-			ReleaseName: fmt.Sprintf("%s-%s", v.Name, v.Version),
-			Namespace:   SystemNamespace,
 			AppId:       app.Id,
 			VersionId:   appVersion.Id,
-			Config:      appVersion.DefaultConfig,
+			ReleaseName: fmt.Sprintf("%s-%s", strings.ToLower(v.Type), v.Name),
+			Namespace:   SystemNamespace,
+			ConfigFile:  appConfigPath,
 			Status:      AppReleaseSatus_BAppReleaseSatus_UNSPECIFIED,
-			Wait:        true,
 		}
 		appReleases = append(appReleases, appRelease)
-		err = a.AppRelease(ctx, app, appVersion, appRelease, nil)
-		if err != nil {
-			return nil, nil, err
-		}
 	}
 	return apps, appReleases, nil
-}
-
-func (a *AppUsecase) GetPodResources(ctx context.Context, appRelease *AppRelease) ([]*AppReleaseResource, error) {
-	resources := make([]*AppReleaseResource, 0)
-	clusterClient, err := GetKubeClientByInCluster()
-	if err != nil {
-		return nil, err
-	}
-	labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s", appRelease.ReleaseName)
-	podResources, _ := clusterClient.CoreV1().Pods(appRelease.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if podResources != nil && len(podResources.Items) > 0 {
-		for _, pod := range podResources.Items {
-			resource := &AppReleaseResource{
-				Name:      pod.Name,
-				Kind:      "Pod",
-				StartedAt: pod.CreationTimestamp.Format("2006-01-02 15:04:05"),
-				Status:    []string{string(pod.Status.Phase)},
-				Events:    make([]string, 0),
-			}
-			events, _ := clusterClient.CoreV1().Events(appRelease.Namespace).List(ctx, metav1.ListOptions{
-				FieldSelector: fmt.Sprintf("involvedObject.name=%s", pod.Name),
-			})
-			if events != nil && len(events.Items) > 0 {
-				for _, event := range events.Items {
-					resource.Events = append(resource.Events, event.Message)
-				}
-			}
-			resources = append(resources, resource)
-		}
-	}
-	return resources, nil
-}
-
-func (a *AppUsecase) GetNetResouces(ctx context.Context, appRelease *AppRelease) ([]*AppReleaseResource, error) {
-	resources := make([]*AppReleaseResource, 0)
-	clusterClient, err := GetKubeClientByInCluster()
-	if err != nil {
-		return nil, err
-	}
-	labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s", appRelease.ReleaseName)
-	serviceResources, _ := clusterClient.CoreV1().Services(appRelease.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if serviceResources != nil && len(serviceResources.Items) > 0 {
-		for _, service := range serviceResources.Items {
-			port := ""
-			for _, v := range service.Spec.Ports {
-				port = fmt.Sprintf("%s %d:%d/%s", port, v.Port, v.NodePort, v.Protocol)
-			}
-			externalIPs := ""
-			for _, v := range service.Spec.ExternalIPs {
-				externalIPs = fmt.Sprintf("%s,%s", externalIPs, v)
-			}
-			resource := &AppReleaseResource{
-				Name:      service.Name,
-				Kind:      "Service",
-				StartedAt: service.CreationTimestamp.Format("2006-01-02 15:04:05"),
-				Status: []string{
-					"Type: " + string(service.Spec.Type),
-					"ClusterIP: " + service.Spec.ClusterIP,
-					"ExternalIP: " + externalIPs,
-					"Port: " + port,
-				},
-			}
-			resources = append(resources, resource)
-		}
-	}
-	ingressResources, _ := clusterClient.NetworkingV1beta1().Ingresses(appRelease.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if ingressResources != nil && len(ingressResources.Items) > 0 {
-		for _, ingress := range ingressResources.Items {
-			class := ""
-			if ingress.Spec.IngressClassName != nil {
-				class = *ingress.Spec.IngressClassName
-			}
-			hosts := ""
-			for _, v := range ingress.Spec.Rules {
-				hosts = fmt.Sprintf("%s,%s", hosts, v.Host)
-			}
-			ports := ""
-			for _, v := range ingress.Spec.TLS {
-				for _, v := range v.Hosts {
-					ports = fmt.Sprintf("%s,%s", ports, v)
-				}
-			}
-			loadBalancerIP := ""
-			for _, v := range ingress.Status.LoadBalancer.Ingress {
-				loadBalancerIP = fmt.Sprintf("%s,%s", loadBalancerIP, v.IP)
-			}
-			resource := &AppReleaseResource{
-				Name:      ingress.Name,
-				Kind:      "Ingress",
-				StartedAt: ingress.CreationTimestamp.Format("2006-01-02 15:04:05"),
-				Status: []string{
-					"class: " + class,
-					"hosts: " + hosts,
-					"address: " + loadBalancerIP,
-					"ports: " + ports,
-				},
-			}
-			resources = append(resources, resource)
-		}
-	}
-	return resources, nil
-}
-
-func (a *AppUsecase) GetAppsReouces(ctx context.Context, appRelease *AppRelease) ([]*AppReleaseResource, error) {
-	resources := make([]*AppReleaseResource, 0)
-	clusterClient, err := GetKubeClientByInCluster()
-	if err != nil {
-		return nil, err
-	}
-	labelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s", appRelease.ReleaseName)
-	deploymentResources, _ := clusterClient.AppsV1().Deployments(appRelease.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if deploymentResources != nil && len(deploymentResources.Items) > 0 {
-		for _, deployment := range deploymentResources.Items {
-			resource := &AppReleaseResource{
-				Name:      deployment.Name,
-				Kind:      "Deployment",
-				StartedAt: deployment.CreationTimestamp.Format("2006-01-02 15:04:05"),
-				Status: []string{
-					"Ready: " + cast.ToString(deployment.Status.ReadyReplicas),
-					"Up-to-date: " + cast.ToString(deployment.Status.UpdatedReplicas),
-					"Available: " + cast.ToString(deployment.Status.AvailableReplicas),
-				},
-			}
-			resources = append(resources, resource)
-		}
-	}
-
-	statefulSetResources, _ := clusterClient.AppsV1().StatefulSets(appRelease.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if statefulSetResources != nil && len(statefulSetResources.Items) > 0 {
-		for _, statefulSet := range statefulSetResources.Items {
-			resource := &AppReleaseResource{
-				Name:      statefulSet.Name,
-				Kind:      "StatefulSet",
-				StartedAt: statefulSet.CreationTimestamp.Format("2006-01-02 15:04:05"),
-				Status: []string{
-					"Ready: " + cast.ToString(statefulSet.Status.ReadyReplicas),
-					"Up-to-date: " + cast.ToString(statefulSet.Status.UpdatedReplicas),
-					"Available: " + cast.ToString(statefulSet.Status.AvailableReplicas),
-				},
-			}
-			resources = append(resources, resource)
-		}
-	}
-
-	deamonsetResources, _ := clusterClient.AppsV1().DaemonSets(appRelease.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if deamonsetResources != nil && len(deamonsetResources.Items) > 0 {
-		for _, deamonset := range deamonsetResources.Items {
-			resource := &AppReleaseResource{
-				Name:      deamonset.Name,
-				Kind:      "Deamonset",
-				StartedAt: deamonset.CreationTimestamp.Format("2006-01-02 15:04:05"),
-				Status: []string{
-					"Desired: " + cast.ToString(deamonset.Status.DesiredNumberScheduled),
-					"Current: " + cast.ToString(deamonset.Status.CurrentNumberScheduled),
-					"Ready: " + cast.ToString(deamonset.Status.NumberReady),
-					"Up-to-date: " + cast.ToString(deamonset.Status.UpdatedNumberScheduled),
-					"Available: " + cast.ToString(deamonset.Status.NumberAvailable),
-				},
-			}
-			resources = append(resources, resource)
-		}
-	}
-
-	jobResources, _ := clusterClient.BatchV1().Jobs(appRelease.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if jobResources != nil && len(jobResources.Items) > 0 {
-		for _, job := range jobResources.Items {
-			resource := &AppReleaseResource{
-				Name:      job.Name,
-				Kind:      "Job",
-				StartedAt: job.CreationTimestamp.Format("2006-01-02 15:04:05"),
-				Status: []string{
-					"Completions: " + cast.ToString(job.Spec.Completions),
-					"Parallelism: " + cast.ToString(job.Spec.Parallelism),
-					"BackoffLimit: " + cast.ToString(job.Spec.BackoffLimit),
-				},
-			}
-			resources = append(resources, resource)
-		}
-	}
-
-	cronjobResources, _ := clusterClient.BatchV1beta1().CronJobs(appRelease.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if cronjobResources != nil && len(cronjobResources.Items) > 0 {
-		for _, cronjob := range cronjobResources.Items {
-			suspend := *cronjob.Spec.Suspend // Dereference the pointer to bool
-			resource := &AppReleaseResource{
-				Name:      cronjob.Name,
-				Kind:      "Cronjob",
-				StartedAt: cronjob.CreationTimestamp.Format("2006-01-02 15:04:05"),
-				Status: []string{
-					"Schedule: " + cronjob.Spec.Schedule,
-					"Suspend: " + cast.ToString(suspend),
-					"Active: " + cast.ToString(len(cronjob.Status.Active)),
-					"Last Schedule: " + cronjob.Status.LastScheduleTime.Format("2006-01-02 15:04:05"),
-				},
-			}
-			resources = append(resources, resource)
-		}
-	}
-	return resources, nil
 }
 
 func (a *AppUsecase) DeleteApp(ctx context.Context, app *App) error {
@@ -416,23 +204,222 @@ func (a *AppUsecase) AppRelease(ctx context.Context, app *App, appVersion *AppVe
 	install.DryRun = appRelease.Dryrun
 	install.Atomic = appRelease.Atomic
 	install.Wait = appRelease.Wait
-	release, err := helmPkg.RunInstall(ctx, install, appVersion.Chart, appRelease.Config)
+	release, err := helmPkg.RunInstall(ctx, install, appVersion.Chart, &helmValues.Options{
+		ValueFiles: []string{appRelease.ConfigFile},
+		Values:     []string{appRelease.Config},
+	})
 	appRelease.Logs = helmPkg.GetLogs()
 	if err != nil {
 		return err
 	}
 	if release != nil {
 		appRelease.ReleaseName = release.Name
-		appRelease.Manifest = strings.TrimSpace(release.Manifest)
 		if release.Info != nil {
-			appRelease.Status = AppReleaseSatus_RUNNING
 			appRelease.Notes = release.Info.Notes
 		}
 		return nil
 	}
-	appRelease.Status = AppReleaseSatus_FAILED
 	return nil
 }
+
+func (a *AppUsecase) GetAppReleaseResources(ctx context.Context, appRelease *AppRelease) ([]*AppReleaseResource, error) {
+	helmPkg, err := NewHelmPkg(a.log, appRelease.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	releaseInfo, err := helmPkg.GetReleaseInfo(appRelease.ReleaseName)
+	if err != nil {
+		return nil, err
+	}
+	if releaseInfo == nil || releaseInfo.Manifest == "" {
+		return nil, errors.New("release not found")
+	}
+	clusterClient, err := GetKubeClientByKubeConfig()
+	if err != nil {
+		return nil, err
+	}
+	events, err := clusterClient.CoreV1().Events(appRelease.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	resources := strings.Split(releaseInfo.Manifest, "---")
+	appReleaseResources := make([]*AppReleaseResource, 0)
+	for _, resource := range resources {
+		if resource == "" {
+			continue
+		}
+		obj := unstructured.Unstructured{}
+		err = yaml.Unmarshal([]byte(resource), &obj.Object)
+		if err != nil {
+			return nil, err
+		}
+		lableStr := ""
+		for k, v := range obj.GetLabels() {
+			lableStr += fmt.Sprintf("%s=%s,", k, v)
+		}
+		lableStr = strings.TrimRight(lableStr, ",")
+		appReleaseResource := &AppReleaseResource{
+			Id:        uuid.NewString(),
+			ReleaseId: appRelease.Id,
+			Name:      obj.GetName(),
+			Namespace: obj.GetNamespace(),
+			Kind:      obj.GetKind(),
+			Lables:    lableStr,
+			Manifest:  resource,
+			Status:    AppReleaseResourceStatus_SUCCESSFUL,
+		}
+		eventsStr := ""
+		for _, event := range events.Items {
+			if event.InvolvedObject.Name == obj.GetName() {
+				if event.Type != "Normal" {
+					appReleaseResource.Status = AppReleaseResourceStatus_UNHEALTHY
+				}
+				eventsStr += fmt.Sprintf("- Type: %s, Reason: %s, Message: %s\n", event.Type, event.Reason, event.Message)
+			}
+		}
+		appReleaseResource.Events = eventsStr
+		appReleaseResources = append(appReleaseResources, appReleaseResource)
+
+		podLableSelector := ""
+		if strings.EqualFold(appReleaseResource.Kind, Deployment) {
+			deploymentResource, err := clusterClient.AppsV1().Deployments(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range deploymentResource.Spec.Selector.MatchLabels {
+				podLableSelector += fmt.Sprintf("%s=%s,", k, v)
+			}
+			podLableSelector = strings.TrimRight(podLableSelector, ",")
+		}
+		if strings.EqualFold(appReleaseResource.Kind, StatefulSet) {
+			statefulSetResource, err := clusterClient.AppsV1().StatefulSets(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range statefulSetResource.Spec.Selector.MatchLabels {
+				podLableSelector += fmt.Sprintf("%s=%s,", k, v)
+			}
+			podLableSelector = strings.TrimRight(podLableSelector, ",")
+		}
+		if strings.EqualFold(appReleaseResource.Kind, DaemonSet) {
+			daemonSetResource, err := clusterClient.AppsV1().DaemonSets(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range daemonSetResource.Spec.Selector.MatchLabels {
+				podLableSelector += fmt.Sprintf("%s=%s,", k, v)
+			}
+			podLableSelector = strings.TrimRight(podLableSelector, ",")
+		}
+		if podLableSelector != "" {
+			podResources, err := clusterClient.CoreV1().Pods(appReleaseResource.Namespace).List(ctx, metav1.ListOptions{
+				LabelSelector: podLableSelector,
+			})
+			if err != nil {
+				return nil, err
+			}
+			for _, pod := range podResources.Items {
+				lableStr := ""
+				for k, v := range pod.Labels {
+					lableStr += fmt.Sprintf("%s=%s,", k, v)
+				}
+				lableStr = strings.TrimRight(lableStr, ",")
+				appReleaseResource := &AppReleaseResource{
+					Id:        uuid.NewString(),
+					ReleaseId: appRelease.Id,
+					Name:      fmt.Sprintf("%s-%s-%s", obj.GetKind(), obj.GetName(), pod.Name),
+					Namespace: pod.Namespace,
+					Kind:      Pod,
+					Lables:    lableStr,
+					Status:    AppReleaseResourceStatus_SUCCESSFUL,
+				}
+				eventsStr := ""
+				for _, event := range events.Items {
+					if string(event.InvolvedObject.UID) == string(pod.UID) {
+						if event.Type != coreV1.EventTypeNormal {
+							appReleaseResource.Status = AppReleaseResourceStatus_UNHEALTHY
+						}
+						eventsStr += fmt.Sprintf("- Type: %s, Reason: %s, Message: %s\n", event.Type, event.Reason, event.Message)
+					}
+				}
+				if pod.Status.Phase != coreV1.PodRunning {
+					appReleaseResource.Status = AppReleaseResourceStatus_UNHEALTHY
+				}
+				for _, containerStatus := range pod.Status.ContainerStatuses {
+					if !containerStatus.Ready {
+						appReleaseResource.Status = AppReleaseResourceStatus_UNHEALTHY
+						break
+					}
+				}
+				appReleaseResource.Events = eventsStr
+				appReleaseResources = append(appReleaseResources, appReleaseResource)
+			}
+		}
+	}
+	return appReleaseResources, nil
+}
+
+func (a *AppUsecase) ReloadAppReleaseResource(ctx context.Context, appReleaseResource *AppReleaseResource) error {
+	clusterClient, err := GetKubeClientByKubeConfig()
+	if err != nil {
+		return err
+	}
+	if strings.EqualFold(appReleaseResource.Kind, Pod) {
+		err = clusterClient.CoreV1().Pods(appReleaseResource.GetNamespace()).Delete(ctx, appReleaseResource.GetName(), metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	podLableSelector := ""
+	if strings.EqualFold(appReleaseResource.Kind, Deployment) {
+		deploymentResource, err := clusterClient.AppsV1().Deployments(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		for k, v := range deploymentResource.Spec.Selector.MatchLabels {
+			podLableSelector += fmt.Sprintf("%s=%s,", k, v)
+		}
+		podLableSelector = strings.TrimRight(podLableSelector, ",")
+	}
+	if strings.EqualFold(appReleaseResource.Kind, StatefulSet) {
+		statefulSetResource, err := clusterClient.AppsV1().StatefulSets(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		for k, v := range statefulSetResource.Spec.Selector.MatchLabels {
+			podLableSelector += fmt.Sprintf("%s=%s,", k, v)
+		}
+		podLableSelector = strings.TrimRight(podLableSelector, ",")
+	}
+	if strings.EqualFold(appReleaseResource.Kind, DaemonSet) {
+		daemonSetResource, err := clusterClient.AppsV1().DaemonSets(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		for k, v := range daemonSetResource.Spec.Selector.MatchLabels {
+			podLableSelector += fmt.Sprintf("%s=%s,", k, v)
+		}
+		podLableSelector = strings.TrimRight(podLableSelector, ",")
+	}
+	if podLableSelector == "" {
+		return nil
+	}
+	podResources, err := clusterClient.CoreV1().Pods(appReleaseResource.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: podLableSelector,
+	})
+	if err != nil {
+		return err
+	}
+	for _, pod := range podResources.Items {
+		err = clusterClient.CoreV1().Pods(appReleaseResource.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (a *AppUsecase) DeleteAppRelease(ctx context.Context, appRelease *AppRelease) error {
 	helmPkg, err := NewHelmPkg(a.log, appRelease.Namespace)
 	if err != nil {

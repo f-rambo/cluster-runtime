@@ -179,8 +179,10 @@ func (c *ClusterUsecase) getNodes(ctx context.Context, clientSet *kubernetes.Cli
 			}
 		}
 		for _, v := range node.Status.Conditions {
-			if v.Status == corev1.ConditionStatus(corev1.NodeReady) {
-				n.Status = NodeStatus_NODE_RUNNING
+			if v.Status != corev1.ConditionStatus(corev1.NodeReady) {
+				n.Status = NodeStatus_NODE_ERROR
+				n.ErrorType = NodeErrorType_CLUSTER_ERROR
+				n.ErrorMessage = fmt.Sprintf("Reason: %s, Message: %s", v.Reason, v.Message)
 			}
 		}
 		if clusterNodeIndex == -1 {

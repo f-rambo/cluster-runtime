@@ -16,6 +16,7 @@ import (
 	pkgChart "helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
+	helmValues "helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/kube"
@@ -254,7 +255,7 @@ func (h *HelmPkg) checkIfInstall(client *action.Install) (bool, error) {
 	return isExist, nil
 }
 
-func (h *HelmPkg) RunInstall(ctx context.Context, client *action.Install, chart, value string) (*release.Release, error) {
+func (h *HelmPkg) RunInstall(ctx context.Context, client *action.Install, chart string, valueOptions *helmValues.Options) (*release.Release, error) {
 	ok, err := h.checkIfInstall(client)
 	if err != nil {
 		return nil, err
@@ -284,7 +285,7 @@ func (h *HelmPkg) RunInstall(ctx context.Context, client *action.Install, chart,
 		upgrade.DependencyUpdate = client.DependencyUpdate
 		upgrade.Labels = client.Labels
 		upgrade.EnableDNS = client.EnableDNS
-		return h.RunUpgrade(ctx, upgrade, client.ReleaseName, chart, value)
+		return h.RunUpgrade(ctx, upgrade, client.ReleaseName, chart, valueOptions)
 	}
 	if client.Timeout == 0 {
 		client.Timeout = 300 * time.Second
@@ -312,9 +313,6 @@ func (h *HelmPkg) RunInstall(ctx context.Context, client *action.Install, chart,
 		h.Logf("This chart is deprecated")
 	}
 	if req := chartRequested.Metadata.Dependencies; req != nil {
-		// If CheckDependencies returns an error, we have unfulfilled dependencies.
-		// As of Helm 2.4.0, this is treated as a stopping condition:
-		// https://github.com/helm/helm/issues/2209
 		if err := action.CheckDependencies(chartRequested, req); err != nil {
 			err = errors.Wrap(err, "An error occurred while checking for chart dependencies. You may need to run `helm dependency build` to fetch missing dependencies")
 			if client.DependencyUpdate {
@@ -345,12 +343,9 @@ func (h *HelmPkg) RunInstall(ctx context.Context, client *action.Install, chart,
 	if err := validateDryRunOptionFlag(client.DryRunOption); err != nil {
 		return nil, err
 	}
-	values := make(map[string]interface{})
-	if value != "" {
-		err = yaml.Unmarshal([]byte(value), &values)
-		if err != nil {
-			return nil, err
-		}
+	values, err := valueOptions.MergeValues(p)
+	if err != nil {
+		return nil, err
 	}
 	return client.RunWithContext(ctx, chartRequested, values)
 }
@@ -436,7 +431,7 @@ func (h *HelmPkg) NewUpGrade() (*action.Upgrade, error) {
 	return client, nil
 }
 
-func (h *HelmPkg) RunUpgrade(ctx context.Context, client *action.Upgrade, name, chart, value string) (*release.Release, error) {
+func (h *HelmPkg) RunUpgrade(ctx context.Context, client *action.Upgrade, name, chart string, valueOptions *helmValues.Options) (*release.Release, error) {
 	if client.Timeout == 0 {
 		client.Timeout = 300 * time.Second
 	}
@@ -492,12 +487,14 @@ func (h *HelmPkg) RunUpgrade(ctx context.Context, client *action.Upgrade, name, 
 	if ch.Metadata.Deprecated {
 		h.Logf("This chart is deprecated")
 	}
-	values := make(map[string]interface{})
-	if value != "" {
-		err = yaml.Unmarshal([]byte(value), &values)
-		if err != nil {
-			return nil, err
-		}
+	values, err := valueOptions.MergeValues(p)
+	if err != nil {
+		return nil, err
 	}
 	return client.RunWithContext(ctx, name, ch, values)
+}
+
+func (h *HelmPkg) GetReleaseInfo(releaseName string) (*release.Release, error) {
+	get := action.NewGet(h.actionConfig)
+	return get.Run(releaseName)
 }
