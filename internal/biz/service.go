@@ -2,61 +2,52 @@ package biz
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"strings"
 
-	wfv1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	"github.com/go-kratos/kratos/v2/log"
 )
 
+type ServiceRepoInterface interface {
+	CommitWorklfow(context.Context, *Workflow) error
+	GetWorkflow(context.Context, *Workflow) error
+	ApplyService(context.Context, *Service, *ContinuousIntegration, *ContinuousDeployment) error
+	GetService(context.Context, *Service) error
+}
+
 type ServiceUseCase struct {
-	log *log.Helper
+	repo ServiceRepoInterface
+	log  *log.Helper
 }
 
-func NewServiceUseCase(logger log.Logger) *ServiceUseCase {
+func NewServiceUseCase(repo ServiceRepoInterface, logger log.Logger) *ServiceUseCase {
 	return &ServiceUseCase{
-		log: log.NewHelper(logger),
+		repo: repo,
+		log:  log.NewHelper(logger),
 	}
 }
 
-func (s *ServiceUseCase) GenerateCIWorkflow(ctx context.Context, service *Service) (ciWf *Workflow, cdwf *Workflow, err error) {
-	ciWorkflowJson, err := GetDefaultWorklfows(ctx, strings.ToLower(service.Business), strings.ToLower(service.Technology), WorkflowType_ContinuousIntegration.String())
-	if err != nil {
-		return nil, nil, err
-	}
-	ciWf = &Workflow{
-		Name:     fmt.Sprintf("default-%s-%s-%s", service.Business, service.Technology, WorkflowType_ContinuousIntegration.String()),
-		Workflow: ciWorkflowJson,
-	}
-	cdWorkflowJson, err := GetDefaultWorklfows(ctx, strings.ToLower(service.Business), strings.ToLower(service.Technology), WorkflowType_ContinuousDeployment.String())
-	if err != nil {
-		return nil, nil, err
-	}
-	cdwf = &Workflow{
-		Name:     fmt.Sprintf("default-%s-%s-%s", service.Business, service.Technology, WorkflowType_ContinuousDeployment.String()),
-		Workflow: cdWorkflowJson,
-	}
-	return ciWf, cdwf, nil
-}
-
-func (s *ServiceUseCase) Create(ctx context.Context, namespace string, workflow *Workflow) error {
-	kubeConf, err := getKubeConfig()
-	if err != nil {
-		return err
-	}
-	argoClient, err := newForConfig(kubeConf)
-	if err != nil {
-		return err
-	}
-	argoWf := &wfv1.Workflow{}
-	err = json.Unmarshal(workflow.Workflow, argoWf)
-	if err != nil {
-		return err
-	}
-	_, err = argoClient.Workflows(namespace).Create(ctx, argoWf)
-	if err != nil {
-		return err
+func (w *Workflow) GetTask(taskName string) *WorkflowTask {
+	for _, step := range w.WorkflowSteps {
+		for _, task := range step.WorkflowTasks {
+			if task.Name == taskName {
+				return task
+			}
+		}
 	}
 	return nil
+}
+
+func (s *ServiceUseCase) CommitWorklfow(ctx context.Context, wf *Workflow) error {
+	return s.repo.CommitWorklfow(ctx, wf)
+}
+
+func (s *ServiceUseCase) GetWorkflow(ctx context.Context, wf *Workflow) error {
+	return s.repo.GetWorkflow(ctx, wf)
+}
+
+func (s *ServiceUseCase) ApplyService(ctx context.Context, service *Service, ci *ContinuousIntegration, cd *ContinuousDeployment) error {
+	return s.repo.ApplyService(ctx, service, ci, cd)
+}
+
+func (s *ServiceUseCase) GetService(ctx context.Context, service *Service) error {
+	return s.repo.GetService(ctx, service)
 }

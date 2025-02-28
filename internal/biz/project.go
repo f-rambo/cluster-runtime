@@ -19,7 +19,7 @@ func NewProjectUseCase(logger log.Logger) *ProjectUseCase {
 }
 
 func (p *ProjectUseCase) CreateNamespace(ctx context.Context, namespace string) error {
-	kubeClientSet, err := GetKubeClientByInCluster()
+	kubeClientSet, err := GetKubeClientByKubeConfig()
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func (p *ProjectUseCase) CreateNamespace(ctx context.Context, namespace string) 
 
 func (p *ProjectUseCase) GetNamespaces(ctx context.Context) ([]string, error) {
 	namespaces := make([]string, 0)
-	kubeClientSet, err := GetKubeClientByInCluster()
+	kubeClientSet, err := GetKubeClientByKubeConfig()
 	if err != nil {
 		return nil, err
 	}

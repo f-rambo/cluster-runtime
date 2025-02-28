@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -121,4 +123,43 @@ func DeserializeFromBase64(data string, msg proto.Message) error {
 		return err
 	}
 	return proto.Unmarshal(decoded, msg)
+}
+
+func ExtractNumber(input string) (int, error) {
+	re := regexp.MustCompile(`\d+`)
+	match := re.FindString(input)
+	if match == "" {
+		return 0, fmt.Errorf("no number found in input string")
+	}
+	return strconv.Atoi(match)
+}
+
+// MapToString converts a map[string]string to a comma-separated string
+func MapToString(m map[string]string) string {
+	if len(m) == 0 {
+		return ""
+	}
+
+	pairs := make([]string, 0, len(m))
+	for k, v := range m {
+		pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
+	}
+	return strings.Join(pairs, ",")
+}
+
+// StringToMap converts a comma-separated string back to map[string]string
+func StringToMap(s string) map[string]string {
+	if s == "" {
+		return make(map[string]string)
+	}
+
+	result := make(map[string]string)
+	pairs := strings.Split(s, ",")
+	for _, pair := range pairs {
+		kv := strings.Split(pair, "=")
+		if len(kv) == 2 {
+			result[kv[0]] = kv[1]
+		}
+	}
+	return result
 }

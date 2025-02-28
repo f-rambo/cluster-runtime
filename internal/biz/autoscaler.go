@@ -22,7 +22,7 @@ func (c *Cluster) generateNodeLables(nodeGroup *NodeGroup) string {
 }
 
 func (uc *ClusterUsecase) GetCurrentCluster(ctx context.Context) (cluster *Cluster, err error) {
-	cluster, err = uc.CurrentCluster(ctx, cluster)
+	err = uc.CurrentCluster(ctx, cluster)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (uc *ClusterUsecase) Cleanup(ctx context.Context) error {
 
 func (uc *ClusterUsecase) Refresh(ctx context.Context) (err error) {
 	cluster := &Cluster{}
-	_, err = uc.CurrentCluster(ctx, cluster)
+	err = uc.CurrentCluster(ctx, cluster)
 	if err != nil {
 		return err
 	}

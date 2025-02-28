@@ -2,7 +2,6 @@ package biz
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,16 +10,7 @@ import (
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/conf"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/utils"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"helm.sh/helm/v3/pkg/cli"
-	helmValues "helm.sh/helm/v3/pkg/cli/values"
-	"helm.sh/helm/v3/pkg/getter"
-	helmrepo "helm.sh/helm/v3/pkg/repo"
-	coreV1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -37,14 +27,28 @@ const (
 	Pod         string = "Pod"
 )
 
+type AppRepoInterface interface {
+	CheckCluster(context.Context) bool
+	GetAppAndVersionInfo(context.Context, *App, *AppVersion) error
+	AppRelease(context.Context, *App, *AppVersion, *AppRelease, *AppRepo) error
+	GetAppReleaseResources(context.Context, *AppRelease) ([]*AppReleaseResource, error)
+	ReloadAppReleaseResource(context.Context, *AppReleaseResource) error
+	DeleteAppRelease(context.Context, *AppRelease) error
+	AddAppRepo(context.Context, *AppRepo) error
+	GetAppsByRepo(context.Context, *AppRepo) ([]*App, error)
+	GetAppDetailByRepo(ctx context.Context, apprepo *AppRepo, appName, version string) (*App, error)
+}
+
 type AppUsecase struct {
+	repo AppRepoInterface
 	log  *log.Helper
 	conf *conf.Bootstrap
 }
 
-func NewAppUseCase(conf *conf.Bootstrap, logger log.Logger) *AppUsecase {
+func NewAppUseCase(conf *conf.Bootstrap, repo AppRepoInterface, logger log.Logger) *AppUsecase {
 	a := &AppUsecase{
 		conf: conf,
+		repo: repo,
 		log:  log.NewHelper(logger),
 	}
 	return a
@@ -78,9 +82,8 @@ func (a *App) DeleteVersion(version string) {
 	}
 }
 
-func (a *AppUsecase) CheckCluster(_ context.Context) bool {
-	_, err := GetKubeClientByInCluster()
-	return err == nil
+func (a *AppUsecase) CheckCluster(ctx context.Context) bool {
+	return a.repo.CheckCluster(ctx)
 }
 
 func (a *AppUsecase) GetAppConfigPath(appName, appVersionNumber string) string {
@@ -156,360 +159,33 @@ func (a *AppUsecase) DeleteAppVersion(ctx context.Context, app *App, appVersion 
 }
 
 func (a *AppUsecase) GetAppAndVersionInfo(ctx context.Context, app *App, appVersion *AppVersion) error {
-	charInfo, err := getLocalChartInfo(appVersion.Chart)
-	if err != nil {
-		return err
-	}
-	charInfoMetadata, err := json.Marshal(charInfo.Metadata)
-	if err != nil {
-		return err
-	}
-	app.Name = charInfo.Name
-	app.Readme = charInfo.Readme
-	app.Description = charInfo.Description
-	app.Metadata = charInfoMetadata
-
-	appVersion.DefaultConfig = charInfo.Config
-	appVersion.Version = charInfo.Version
-	appVersion.Chart = charInfo.Chart
-	return nil
+	return a.repo.GetAppAndVersionInfo(ctx, app, appVersion)
 }
 
 func (a *AppUsecase) AppRelease(ctx context.Context, app *App, appVersion *AppVersion, appRelease *AppRelease, appRepo *AppRepo) error {
-	helmPkg, err := NewHelmPkg(a.log, appRelease.Namespace)
-	if err != nil {
-		return err
-	}
-	install, err := helmPkg.NewInstall()
-	if err != nil {
-		return err
-	}
-	if appRepo != nil && appVersion.Chart == "" {
-		appPath := utils.GetServerStoragePathByNames(AppPackage)
-		pullClient, err := helmPkg.NewPull()
-		if err != nil {
-			return err
-		}
-		err = helmPkg.RunPull(pullClient, appPath, fmt.Sprintf("%s/%s", appRepo.Name, app.Name))
-		if err != nil {
-			return err
-		}
-		appVersion.Chart = filepath.Join(appPath, fmt.Sprintf("%s-%s.tgz", app.Name, appVersion.Version))
-	}
-	install.ReleaseName = appRelease.ReleaseName
-	install.Namespace = appRelease.Namespace
-	install.CreateNamespace = true
-	install.GenerateName = true
-	install.Version = appVersion.Version
-	install.DryRun = appRelease.Dryrun
-	install.Atomic = appRelease.Atomic
-	install.Wait = appRelease.Wait
-	release, err := helmPkg.RunInstall(ctx, install, appVersion.Chart, &helmValues.Options{
-		ValueFiles: []string{appRelease.ConfigFile},
-		Values:     []string{appRelease.Config},
-	})
-	appRelease.Logs = helmPkg.GetLogs()
-	if err != nil {
-		return err
-	}
-	if release != nil {
-		appRelease.ReleaseName = release.Name
-		if release.Info != nil {
-			appRelease.Notes = release.Info.Notes
-		}
-		return nil
-	}
-	return nil
+	return a.repo.AppRelease(ctx, app, appVersion, appRelease, appRepo)
 }
 
 func (a *AppUsecase) GetAppReleaseResources(ctx context.Context, appRelease *AppRelease) ([]*AppReleaseResource, error) {
-	helmPkg, err := NewHelmPkg(a.log, appRelease.Namespace)
-	if err != nil {
-		return nil, err
-	}
-	releaseInfo, err := helmPkg.GetReleaseInfo(appRelease.ReleaseName)
-	if err != nil {
-		return nil, err
-	}
-	if releaseInfo == nil || releaseInfo.Manifest == "" {
-		return nil, errors.New("release not found")
-	}
-	clusterClient, err := GetKubeClientByKubeConfig()
-	if err != nil {
-		return nil, err
-	}
-	events, err := clusterClient.CoreV1().Events(appRelease.Namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	resources := strings.Split(releaseInfo.Manifest, "---")
-	appReleaseResources := make([]*AppReleaseResource, 0)
-	for _, resource := range resources {
-		if resource == "" {
-			continue
-		}
-		obj := unstructured.Unstructured{}
-		err = yaml.Unmarshal([]byte(resource), &obj.Object)
-		if err != nil {
-			return nil, err
-		}
-		lableStr := ""
-		for k, v := range obj.GetLabels() {
-			lableStr += fmt.Sprintf("%s=%s,", k, v)
-		}
-		lableStr = strings.TrimRight(lableStr, ",")
-		appReleaseResource := &AppReleaseResource{
-			Id:        uuid.NewString(),
-			ReleaseId: appRelease.Id,
-			Name:      obj.GetName(),
-			Namespace: obj.GetNamespace(),
-			Kind:      obj.GetKind(),
-			Lables:    lableStr,
-			Manifest:  resource,
-			Status:    AppReleaseResourceStatus_SUCCESSFUL,
-		}
-		eventsStr := ""
-		for _, event := range events.Items {
-			if event.InvolvedObject.Name == obj.GetName() {
-				if event.Type != "Normal" {
-					appReleaseResource.Status = AppReleaseResourceStatus_UNHEALTHY
-				}
-				eventsStr += fmt.Sprintf("- Type: %s, Reason: %s, Message: %s\n", event.Type, event.Reason, event.Message)
-			}
-		}
-		appReleaseResource.Events = eventsStr
-		appReleaseResources = append(appReleaseResources, appReleaseResource)
-
-		podLableSelector := ""
-		if strings.EqualFold(appReleaseResource.Kind, Deployment) {
-			deploymentResource, err := clusterClient.AppsV1().Deployments(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
-			if err != nil {
-				return nil, err
-			}
-			for k, v := range deploymentResource.Spec.Selector.MatchLabels {
-				podLableSelector += fmt.Sprintf("%s=%s,", k, v)
-			}
-			podLableSelector = strings.TrimRight(podLableSelector, ",")
-		}
-		if strings.EqualFold(appReleaseResource.Kind, StatefulSet) {
-			statefulSetResource, err := clusterClient.AppsV1().StatefulSets(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
-			if err != nil {
-				return nil, err
-			}
-			for k, v := range statefulSetResource.Spec.Selector.MatchLabels {
-				podLableSelector += fmt.Sprintf("%s=%s,", k, v)
-			}
-			podLableSelector = strings.TrimRight(podLableSelector, ",")
-		}
-		if strings.EqualFold(appReleaseResource.Kind, DaemonSet) {
-			daemonSetResource, err := clusterClient.AppsV1().DaemonSets(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
-			if err != nil {
-				return nil, err
-			}
-			for k, v := range daemonSetResource.Spec.Selector.MatchLabels {
-				podLableSelector += fmt.Sprintf("%s=%s,", k, v)
-			}
-			podLableSelector = strings.TrimRight(podLableSelector, ",")
-		}
-		if podLableSelector != "" {
-			podResources, err := clusterClient.CoreV1().Pods(appReleaseResource.Namespace).List(ctx, metav1.ListOptions{
-				LabelSelector: podLableSelector,
-			})
-			if err != nil {
-				return nil, err
-			}
-			for _, pod := range podResources.Items {
-				lableStr := ""
-				for k, v := range pod.Labels {
-					lableStr += fmt.Sprintf("%s=%s,", k, v)
-				}
-				lableStr = strings.TrimRight(lableStr, ",")
-				appReleaseResource := &AppReleaseResource{
-					Id:        uuid.NewString(),
-					ReleaseId: appRelease.Id,
-					Name:      fmt.Sprintf("%s-%s-%s", obj.GetKind(), obj.GetName(), pod.Name),
-					Namespace: pod.Namespace,
-					Kind:      Pod,
-					Lables:    lableStr,
-					Status:    AppReleaseResourceStatus_SUCCESSFUL,
-				}
-				eventsStr := ""
-				for _, event := range events.Items {
-					if string(event.InvolvedObject.UID) == string(pod.UID) {
-						if event.Type != coreV1.EventTypeNormal {
-							appReleaseResource.Status = AppReleaseResourceStatus_UNHEALTHY
-						}
-						eventsStr += fmt.Sprintf("- Type: %s, Reason: %s, Message: %s\n", event.Type, event.Reason, event.Message)
-					}
-				}
-				if pod.Status.Phase != coreV1.PodRunning {
-					appReleaseResource.Status = AppReleaseResourceStatus_UNHEALTHY
-				}
-				for _, containerStatus := range pod.Status.ContainerStatuses {
-					if !containerStatus.Ready {
-						appReleaseResource.Status = AppReleaseResourceStatus_UNHEALTHY
-						break
-					}
-				}
-				appReleaseResource.Events = eventsStr
-				appReleaseResources = append(appReleaseResources, appReleaseResource)
-			}
-		}
-	}
-	return appReleaseResources, nil
+	return a.repo.GetAppReleaseResources(ctx, appRelease)
 }
 
 func (a *AppUsecase) ReloadAppReleaseResource(ctx context.Context, appReleaseResource *AppReleaseResource) error {
-	clusterClient, err := GetKubeClientByKubeConfig()
-	if err != nil {
-		return err
-	}
-	if strings.EqualFold(appReleaseResource.Kind, Pod) {
-		err = clusterClient.CoreV1().Pods(appReleaseResource.GetNamespace()).Delete(ctx, appReleaseResource.GetName(), metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	podLableSelector := ""
-	if strings.EqualFold(appReleaseResource.Kind, Deployment) {
-		deploymentResource, err := clusterClient.AppsV1().Deployments(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		for k, v := range deploymentResource.Spec.Selector.MatchLabels {
-			podLableSelector += fmt.Sprintf("%s=%s,", k, v)
-		}
-		podLableSelector = strings.TrimRight(podLableSelector, ",")
-	}
-	if strings.EqualFold(appReleaseResource.Kind, StatefulSet) {
-		statefulSetResource, err := clusterClient.AppsV1().StatefulSets(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		for k, v := range statefulSetResource.Spec.Selector.MatchLabels {
-			podLableSelector += fmt.Sprintf("%s=%s,", k, v)
-		}
-		podLableSelector = strings.TrimRight(podLableSelector, ",")
-	}
-	if strings.EqualFold(appReleaseResource.Kind, DaemonSet) {
-		daemonSetResource, err := clusterClient.AppsV1().DaemonSets(appReleaseResource.Namespace).Get(ctx, appReleaseResource.GetName(), metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		for k, v := range daemonSetResource.Spec.Selector.MatchLabels {
-			podLableSelector += fmt.Sprintf("%s=%s,", k, v)
-		}
-		podLableSelector = strings.TrimRight(podLableSelector, ",")
-	}
-	if podLableSelector == "" {
-		return nil
-	}
-	podResources, err := clusterClient.CoreV1().Pods(appReleaseResource.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: podLableSelector,
-	})
-	if err != nil {
-		return err
-	}
-	for _, pod := range podResources.Items {
-		err = clusterClient.CoreV1().Pods(appReleaseResource.Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return a.repo.ReloadAppReleaseResource(ctx, appReleaseResource)
 }
 
 func (a *AppUsecase) DeleteAppRelease(ctx context.Context, appRelease *AppRelease) error {
-	helmPkg, err := NewHelmPkg(a.log, appRelease.Namespace)
-	if err != nil {
-		return err
-	}
-	uninstall, err := helmPkg.NewUninstall()
-	if err != nil {
-		return err
-	}
-	uninstall.KeepHistory = false
-	uninstall.DryRun = appRelease.Dryrun
-	uninstall.Wait = appRelease.Wait
-	resp, err := helmPkg.RunUninstall(uninstall, appRelease.ReleaseName)
-	appRelease.Logs = helmPkg.GetLogs()
-	if err != nil {
-		return errors.WithMessage(err, "uninstall fail")
-	}
-	if resp != nil && resp.Release != nil && resp.Release.Info != nil {
-		appRelease.Status = AppReleaseSatus_RUNNING
-	}
-	appRelease.Notes = resp.Info
-	return nil
+	return a.repo.DeleteAppRelease(ctx, appRelease)
 }
 
 func (a *AppUsecase) AddAppRepo(ctx context.Context, repo *AppRepo) error {
-	settings := cli.New()
-	res, err := helmrepo.NewChartRepository(&helmrepo.Entry{
-		Name: repo.Name,
-		URL:  repo.Url,
-	}, getter.All(settings))
-	if err != nil {
-		return err
-	}
-	res.CachePath = utils.GetServerStoragePathByNames(AppPackage)
-	indexFile, err := res.DownloadIndexFile()
-	if err != nil {
-		return err
-	}
-	repo.IndexPath = indexFile
-	return nil
+	return a.repo.AddAppRepo(ctx, repo)
 }
 
 func (a *AppUsecase) GetAppsByRepo(ctx context.Context, repo *AppRepo) ([]*App, error) {
-	index, err := helmrepo.LoadIndexFile(repo.IndexPath)
-	if err != nil {
-		return nil, err
-	}
-	apps := make([]*App, 0)
-	for chartName, chartVersions := range index.Entries {
-		app := &App{Name: chartName, AppRepoId: repo.Id, Versions: make([]*AppVersion, 0)}
-		for _, chartMatedata := range chartVersions {
-			if len(chartMatedata.URLs) == 0 {
-				return nil, errors.New("chart urls is empty")
-			}
-			app.Icon = chartMatedata.Icon
-			app.Description = chartMatedata.Description
-			appVersion := &AppVersion{Name: chartMatedata.Name, Chart: chartMatedata.URLs[0], Version: chartMatedata.Version}
-			app.Versions = append(app.Versions, appVersion)
-		}
-		apps = append(apps, app)
-	}
-	return apps, nil
+	return a.repo.GetAppsByRepo(ctx, repo)
 }
 
 func (a *AppUsecase) GetAppDetailByRepo(ctx context.Context, apprepo *AppRepo, appName, version string) (*App, error) {
-	index, err := helmrepo.LoadIndexFile(apprepo.IndexPath)
-	if err != nil {
-		return nil, err
-	}
-	app := &App{Name: appName, AppRepoId: apprepo.Id, Versions: make([]*AppVersion, 0)}
-	for chartName, chartVersions := range index.Entries {
-		if chartName != appName {
-			continue
-		}
-		for i, chartMatedata := range chartVersions {
-			if len(chartMatedata.URLs) == 0 {
-				return nil, errors.New("chart urls is empty")
-			}
-			app.Icon = chartMatedata.Icon
-			app.Name = chartName
-			app.Description = chartMatedata.Description
-			appVersion := &AppVersion{Name: chartMatedata.Name, Chart: chartMatedata.URLs[0], Version: chartMatedata.Version}
-			if (version == "" && i == 0) || (version != "" && version == chartMatedata.Version) {
-				err = a.GetAppAndVersionInfo(ctx, app, appVersion)
-				if err != nil {
-					return nil, err
-				}
-			}
-			app.Versions = append(app.Versions, appVersion)
-		}
-	}
-	return app, nil
+	return a.repo.GetAppDetailByRepo(ctx, apprepo, appName, version)
 }

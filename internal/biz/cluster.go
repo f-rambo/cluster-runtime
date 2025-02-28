@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/utils"
@@ -11,12 +12,15 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var ErrClusterNotFound error = errors.New("cluster not found")
@@ -59,6 +63,67 @@ func NewClusterUseCase(logger log.Logger) *ClusterUsecase {
 	return c
 }
 
+func GetKubeClientByKubeConfig(KubeConfigPaths ...string) (clientset *kubernetes.Clientset, err error) {
+	var KubeConfigPath string
+	if len(KubeConfigPaths) == 0 {
+		KubeConfigPath = clientcmd.RecommendedHomeFile
+	} else {
+		KubeConfigPath = KubeConfigPaths[0]
+	}
+	config, err := clientcmd.BuildConfigFromFlags("", KubeConfigPath)
+	if err != nil {
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+	}
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, errors.Wrap(err, "get kubernetes by kubeconfig client failed")
+	}
+	return client, nil
+}
+
+func GetKubeClientByRestConfig(masterIp, token, ca, key, cert string) (clientset *kubernetes.Clientset, err error) {
+	if masterIp == "" || token == "" || ca == "" || key == "" || cert == "" {
+		return nil, errors.New("invalid rest config")
+	}
+	config := &rest.Config{
+		Host:        masterIp + ":6443",
+		BearerToken: token,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData:   []byte(ca),
+			KeyData:  []byte(key),
+			CertData: []byte(cert),
+		},
+	}
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, errors.Wrap(err, "get kubernetes by rest config client failed")
+	}
+	if client == nil {
+		return nil, errors.New("get kubernetes by rest config client failed")
+	}
+	return client, nil
+}
+
+func GetDynamicClientByRestConfig(masterIp, token, ca, key, cert string) (*dynamic.DynamicClient, error) {
+	config := &rest.Config{
+		Host:        masterIp + ":6443",
+		BearerToken: token,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData:   []byte(ca),
+			KeyData:  []byte(key),
+			CertData: []byte(cert),
+		},
+	}
+	client, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, errors.Wrap(err, "get dynamic client by rest config failed")
+	}
+	return client, nil
+}
+
 func (c *ClusterUsecase) CreateYAMLFile(ctx context.Context, dynamicClient *dynamic.DynamicClient, namespace, resource, filePath string) error {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -92,26 +157,26 @@ func (c *ClusterUsecase) CheckClusterInstalled(cluster *Cluster) error {
 	return nil
 }
 
-func (c *ClusterUsecase) CurrentCluster(ctx context.Context, cluster *Cluster) (*Cluster, error) {
-	kubeClient, err := GetKubeClientByInCluster()
+func (c *ClusterUsecase) CurrentCluster(ctx context.Context, cluster *Cluster) error {
+	kubeClient, err := GetKubeClientByKubeConfig()
 	if err != nil {
-		return cluster, ErrClusterNotFound
+		return ErrClusterNotFound
 	}
 	err = c.getClusterInfo(ctx, kubeClient, cluster)
 	if err != nil {
-		return cluster, err
+		return err
 	}
 	err = c.getNodes(ctx, kubeClient, cluster)
 	if err != nil {
-		return cluster, err
+		return err
 	}
-	return cluster, nil
+	return nil
 }
 
-func (c *ClusterUsecase) HandlerNodes(ctx context.Context, cluster *Cluster) (*Cluster, error) {
+func (c *ClusterUsecase) HandlerNodes(ctx context.Context, cluster *Cluster) error {
 	clientset, err := GetKubeClientByRestConfig(cluster.ApiServerAddress, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
 	if err != nil {
-		return cluster, err
+		return err
 	}
 	for _, node := range cluster.Nodes {
 		if node.Status != NodeStatus_NODE_DELETING {
@@ -120,28 +185,31 @@ func (c *ClusterUsecase) HandlerNodes(ctx context.Context, cluster *Cluster) (*C
 
 		pods, err := c.getPodsOnNode(ctx, clientset, node.Name)
 		if err != nil {
-			return cluster, fmt.Errorf("failed to get pods on node %s: %v", node.Name, err)
+			return fmt.Errorf("failed to get pods on node %s: %v", node.Name, err)
 		}
 
 		if err := c.evictPods(ctx, clientset, pods); err != nil {
-			return cluster, fmt.Errorf("failed to evict pods: %v", err)
+			return fmt.Errorf("failed to evict pods: %v", err)
 		}
 
 		if err := c.waitForPodsToBeDeleted(ctx, clientset, pods, 5*time.Minute); err != nil {
-			return cluster, fmt.Errorf("timeout waiting for pods to be deleted: %v", err)
+			return fmt.Errorf("timeout waiting for pods to be deleted: %v", err)
 		}
 
 		err = clientset.CoreV1().Nodes().Delete(ctx, node.Name, metav1.DeleteOptions{})
 		if err != nil {
-			return cluster, err
+			return err
 		}
 	}
-	return cluster, nil
+	return nil
 }
 
 func (c *ClusterUsecase) getClusterInfo(ctx context.Context, clientSet *kubernetes.Clientset, cluster *Cluster) error {
 	configMap, err := clientSet.CoreV1().ConfigMaps(CloudCopilotNamespace).Get(ctx, ClusterInformation.String(), metav1.GetOptions{})
 	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			return nil
+		}
 		return err
 	}
 	clusterInfoString, ok := configMap.Data[ClusterInformation.String()]
@@ -174,15 +242,61 @@ func (c *ClusterUsecase) getNodes(ctx context.Context, clientSet *kubernetes.Cli
 			if v.Address == "" {
 				continue
 			}
-			if v.Type == "InternalIP" {
+			if v.Type == corev1.NodeInternalIP {
 				n.Ip = v.Address
 			}
 		}
 		for _, v := range node.Status.Conditions {
-			if v.Status != corev1.ConditionStatus(corev1.NodeReady) {
+			switch v.Type {
+			case corev1.NodeReady:
+				if v.Status == corev1.ConditionFalse {
+					n.Status = NodeStatus_NODE_ERROR
+					n.ErrorType = NodeErrorType_CLUSTER_ERROR
+					n.ErrorMessage += fmt.Sprintf("Reason: %s, Message: %s", v.Reason, v.Message)
+				}
+			case corev1.NodeMemoryPressure:
+				if v.Status == corev1.ConditionTrue {
+					n.Status = NodeStatus_NODE_ERROR
+					n.ErrorType = NodeErrorType_CLUSTER_ERROR
+					n.ErrorMessage += fmt.Sprintf("Reason: %s, Message: %s", v.Reason, v.Message)
+				}
+			case corev1.NodeDiskPressure:
+				if v.Status == corev1.ConditionTrue {
+					n.Status = NodeStatus_NODE_ERROR
+					n.ErrorType = NodeErrorType_CLUSTER_ERROR
+					n.ErrorMessage += fmt.Sprintf("Reason: %s, Message: %s", v.Reason, v.Message)
+				}
+			case corev1.NodePIDPressure:
+				if v.Status == corev1.ConditionTrue {
+					n.Status = NodeStatus_NODE_ERROR
+					n.ErrorType = NodeErrorType_CLUSTER_ERROR
+					n.ErrorMessage += fmt.Sprintf("Reason: %s, Message: %s", v.Reason, v.Message)
+				}
+			case corev1.NodeNetworkUnavailable:
+				if v.Status == corev1.ConditionTrue {
+					n.Status = NodeStatus_NODE_ERROR
+					n.ErrorType = NodeErrorType_CLUSTER_ERROR
+					n.ErrorMessage += fmt.Sprintf("Reason: %s, Message: %s", v.Reason, v.Message)
+				}
+			default:
 				n.Status = NodeStatus_NODE_ERROR
 				n.ErrorType = NodeErrorType_CLUSTER_ERROR
-				n.ErrorMessage = fmt.Sprintf("Reason: %s, Message: %s", v.Reason, v.Message)
+				n.ErrorMessage += fmt.Sprintf("Reason: %s, Message: %s", corev1.ConditionUnknown, v.Message)
+			}
+		}
+		for k, v := range node.Status.Capacity {
+			gi, _ := toGiMi(&v)
+			if k == corev1.ResourceCPU {
+				n.NodeInfo += fmt.Sprintf("CPU(gi): %d ", gi)
+			}
+			if k == corev1.ResourceMemory {
+				n.NodeInfo += fmt.Sprintf("Memory(gi): %d ", gi)
+			}
+			if k == corev1.ResourceEphemeralStorage {
+				n.NodeInfo += fmt.Sprintf("Disk(gi): %d ", gi)
+			}
+			if strings.Contains(strings.ToUpper(k.String()), "GPU") {
+				n.NodeInfo += fmt.Sprintf("GPU(%s): %d ", k.String(), gi)
 			}
 		}
 		if clusterNodeIndex == -1 {
@@ -192,6 +306,19 @@ func (c *ClusterUsecase) getNodes(ctx context.Context, clientSet *kubernetes.Cli
 		}
 	}
 	return nil
+}
+
+func toGiMi(q *resource.Quantity) (int32, int32) {
+	var gi, mi float64
+	if q.Format == resource.BinarySI {
+		gi = float64(q.Value()) / (1 << 30) // 1 Gi = 2^30 bytes
+		mi = float64(q.Value()) / (1 << 20) // 1 Mi = 2^20 bytes
+	}
+	if q.Format == resource.DecimalSI {
+		gi = float64(q.Value())
+		mi = float64(q.Value()) * 1024
+	}
+	return int32(gi), int32(mi)
 }
 
 func (c *ClusterUsecase) getPodsOnNode(ctx context.Context, clientset *kubernetes.Clientset, nodeName string) ([]corev1.Pod, error) {

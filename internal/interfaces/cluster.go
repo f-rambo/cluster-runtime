@@ -38,9 +38,17 @@ func (c *ClusterInterface) CheckClusterInstalled(ctx context.Context, cluster *b
 }
 
 func (c *ClusterInterface) CurrentCluster(ctx context.Context, cluster *biz.Cluster) (*biz.Cluster, error) {
-	return c.uc.CurrentCluster(ctx, cluster)
+	err := c.uc.CurrentCluster(ctx, cluster)
+	if err != nil {
+		return nil, err
+	}
+	return cluster, nil
 }
 
 func (c *ClusterInterface) HandlerNodes(ctx context.Context, cluster *biz.Cluster) (*biz.Cluster, error) {
-	return c.uc.HandlerNodes(ctx, cluster)
+	err := c.uc.HandlerNodes(ctx, cluster)
+	if err != nil {
+		return nil, err
+	}
+	return cluster, nil
 }

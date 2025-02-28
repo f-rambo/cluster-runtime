@@ -10,6 +10,7 @@ import (
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/biz"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/conf"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/interfaces"
+	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/repo"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/server"
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/log"
@@ -25,13 +26,16 @@ import (
 func wireApp(bootstrap *conf.Bootstrap, logger log.Logger) (*kratos.App, func(), error) {
 	clusterUsecase := biz.NewClusterUseCase(logger)
 	clusterInterface := interfaces.NewClusterInterface(clusterUsecase, logger)
-	appUsecase := biz.NewAppUseCase(bootstrap, logger)
+	appRepoInterface := repo.NewAppRepo(logger)
+	appUsecase := biz.NewAppUseCase(bootstrap, appRepoInterface, logger)
 	appInterface := interfaces.NewAppInterface(appUsecase, logger)
 	projectUseCase := biz.NewProjectUseCase(logger)
 	projectInterface := interfaces.NewProjectInterface(projectUseCase, logger)
-	serviceUseCase := biz.NewServiceUseCase(logger)
+	serviceRepoInterface := repo.NewServiceRepo(logger)
+	serviceUseCase := biz.NewServiceUseCase(serviceRepoInterface, logger)
 	serviceInterface := interfaces.NewServiceInterface(serviceUseCase)
-	userUseCase := biz.NewUserUseCase(logger)
+	userRepoInterface := repo.NewUserRepo(logger)
+	userUseCase := biz.NewUserUseCase(userRepoInterface, logger)
 	userInterface := interfaces.NewUserInterface(userUseCase)
 	grpcServer := server.NewGRPCServer(bootstrap, clusterInterface, appInterface, projectInterface, serviceInterface, userInterface, logger)
 	app := newApp(logger, grpcServer)

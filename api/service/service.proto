@@ -9,6 +9,11 @@ import "internal/biz/service.proto";
 option go_package = "api/service;";
 
 service ServiceInterface {
-      rpc Create(service.CreateReq) returns (common.Msg);
-      rpc GenerateCIWorkflow(biz.service.Service) returns (service.GenerateCIWorkflowResponse);
+      rpc ApplyService(service.ApplyServiceRequest) returns (common.Msg);
+
+      rpc GetSerice(biz.service.Service) returns (biz.service.Service);
+
+      rpc CommitWorklfow(biz.service.Workflow) returns (common.Msg);
+
+      rpc GetWorkflow(biz.service.Workflow) returns (biz.service.Workflow);
 }
