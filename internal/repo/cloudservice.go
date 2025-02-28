@@ -102,7 +102,7 @@ func (c *cloudServiceClient) Delete(ctx context.Context, name string, opts mateV
 		Error()
 }
 
-func ConvertToCloudService(service *biz.Service, ci *biz.ContinuousIntegration, cd *biz.ContinuousDeployment) *operatorApi.CloudService {
+func ConvertToCloudService(service *biz.Service, cd *biz.ContinuousDeployment) *operatorApi.CloudService {
 	volumes := make([]operatorApi.Volume, 0)
 	for _, v := range service.Volumes {
 		volumes = append(volumes, operatorApi.Volume{

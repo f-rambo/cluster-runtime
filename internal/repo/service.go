@@ -47,15 +47,15 @@ func (s *ServiceRepo) GetWorkflow(ctx context.Context, wf *biz.Workflow) error {
 	return nil
 }
 
-func (s *ServiceRepo) ApplyService(ctx context.Context, service *biz.Service, ci *biz.ContinuousIntegration, cd *biz.ContinuousDeployment) error {
+func (s *ServiceRepo) ApplyService(ctx context.Context, service *biz.Service, cd *biz.ContinuousDeployment) error {
 	cloudServiceClinet, err := NewClServiceClient(service.Namespace)
 	if err != nil {
 		return err
 	}
-	_, err = cloudServiceClinet.Get(ctx, service.Name, mateV1.GetOptions{})
+	cloudService, err := cloudServiceClinet.Get(ctx, service.Name, mateV1.GetOptions{})
 	if err != nil {
 		if k8sError.IsNotFound(err) {
-			_, err := cloudServiceClinet.Create(ctx, ConvertToCloudService(service, ci, cd))
+			_, err := cloudServiceClinet.Create(ctx, ConvertToCloudService(service, cd))
 			if err != nil {
 				return err
 			}
@@ -63,7 +63,9 @@ func (s *ServiceRepo) ApplyService(ctx context.Context, service *biz.Service, ci
 		}
 		return err
 	}
-	_, err = cloudServiceClinet.Update(ctx, ConvertToCloudService(service, ci, cd))
+	cs := ConvertToCloudService(service, cd)
+	cs.ResourceVersion = cloudService.ResourceVersion
+	_, err = cloudServiceClinet.Update(ctx, cs)
 	if err != nil {
 		return err
 	}

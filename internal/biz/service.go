@@ -9,7 +9,7 @@ import (
 type ServiceRepoInterface interface {
 	CommitWorklfow(context.Context, *Workflow) error
 	GetWorkflow(context.Context, *Workflow) error
-	ApplyService(context.Context, *Service, *ContinuousIntegration, *ContinuousDeployment) error
+	ApplyService(context.Context, *Service, *ContinuousDeployment) error
 	GetService(context.Context, *Service) error
 }
 
@@ -44,8 +44,8 @@ func (s *ServiceUseCase) GetWorkflow(ctx context.Context, wf *Workflow) error {
 	return s.repo.GetWorkflow(ctx, wf)
 }
 
-func (s *ServiceUseCase) ApplyService(ctx context.Context, service *Service, ci *ContinuousIntegration, cd *ContinuousDeployment) error {
-	return s.repo.ApplyService(ctx, service, ci, cd)
+func (s *ServiceUseCase) ApplyService(ctx context.Context, service *Service, cd *ContinuousDeployment) error {
+	return s.repo.ApplyService(ctx, service, cd)
 }
 
 func (s *ServiceUseCase) GetService(ctx context.Context, service *Service) error {

@@ -20,7 +20,7 @@ func NewServiceInterface(serviceUc *biz.ServiceUseCase) *ServiceInterface {
 }
 
 func (s *ServiceInterface) ApplyService(ctx context.Context, req *serviceApi.ApplyServiceRequest) (*common.Msg, error) {
-	err := s.serviceUc.ApplyService(ctx, req.Service, req.Ci, req.Cd)
+	err := s.serviceUc.ApplyService(ctx, req.Service, req.Cd)
 	if err != nil {
 		return nil, err
 	}
