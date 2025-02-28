@@ -7,7 +7,7 @@ import (
 )
 
 type ServiceRepoInterface interface {
-	CommitWorklfow(context.Context, *Workflow) error
+	CommitWorkflow(context.Context, *Workflow) error
 	GetWorkflow(context.Context, *Workflow) error
 	ApplyService(context.Context, *Service, *ContinuousDeployment) error
 	GetService(context.Context, *Service) error
@@ -36,8 +36,8 @@ func (w *Workflow) GetTask(taskName string) *WorkflowTask {
 	return nil
 }
 
-func (s *ServiceUseCase) CommitWorklfow(ctx context.Context, wf *Workflow) error {
-	return s.repo.CommitWorklfow(ctx, wf)
+func (s *ServiceUseCase) CommitWorkflow(ctx context.Context, wf *Workflow) error {
+	return s.repo.CommitWorkflow(ctx, wf)
 }
 
 func (s *ServiceUseCase) GetWorkflow(ctx context.Context, wf *Workflow) error {

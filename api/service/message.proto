@@ -10,11 +10,3 @@ message ApplyServiceRequest {
   biz.service.Service service = 1;
   biz.service.ContinuousDeployment cd = 2;
 }
-
-message GetServiceRequest {
-  string name = 1;
-}
-
-message GetWorkflowRequest {
-  string name = 1;
-}

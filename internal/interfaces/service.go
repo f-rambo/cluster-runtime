@@ -35,8 +35,8 @@ func (s *ServiceInterface) GetService(ctx context.Context, service *biz.Service)
 	return service, nil
 }
 
-func (s *ServiceInterface) CommitWorklfow(ctx context.Context, wf *biz.Workflow) (*common.Msg, error) {
-	err := s.serviceUc.CommitWorklfow(ctx, wf)
+func (s *ServiceInterface) CommitWorkflow(ctx context.Context, wf *biz.Workflow) (*common.Msg, error) {
+	err := s.serviceUc.CommitWorkflow(ctx, wf)
 	if err != nil {
 		return nil, err
 	}

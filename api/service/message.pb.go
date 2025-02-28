@@ -76,100 +76,6 @@ func (x *ApplyServiceRequest) GetCd() *biz.ContinuousDeployment {
 	return nil
 }
 
-type GetServiceRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-}
-
-func (x *GetServiceRequest) Reset() {
-	*x = GetServiceRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_message_proto_msgTypes[1]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *GetServiceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetServiceRequest) ProtoMessage() {}
-
-func (x *GetServiceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_message_proto_msgTypes[1]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetServiceRequest.ProtoReflect.Descriptor instead.
-func (*GetServiceRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_message_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *GetServiceRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-type GetWorkflowRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-}
-
-func (x *GetWorkflowRequest) Reset() {
-	*x = GetWorkflowRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_message_proto_msgTypes[2]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *GetWorkflowRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetWorkflowRequest) ProtoMessage() {}
-
-func (x *GetWorkflowRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_message_proto_msgTypes[2]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetWorkflowRequest.ProtoReflect.Descriptor instead.
-func (*GetWorkflowRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_message_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *GetWorkflowRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
 var File_api_service_message_proto protoreflect.FileDescriptor
 
 var file_api_service_message_proto_rawDesc = []byte{
@@ -185,14 +91,9 @@ var file_api_service_message_proto_rawDesc = []byte{
 	0x65, 0x52, 0x07, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x31, 0x0a, 0x02, 0x63, 0x64,
 	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x21, 0x2e, 0x62, 0x69, 0x7a, 0x2e, 0x73, 0x65, 0x72,
 	0x76, 0x69, 0x63, 0x65, 0x2e, 0x43, 0x6f, 0x6e, 0x74, 0x69, 0x6e, 0x75, 0x6f, 0x75, 0x73, 0x44,
-	0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x02, 0x63, 0x64, 0x22, 0x27, 0x0a,
-	0x11, 0x47, 0x65, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x28, 0x0a, 0x12, 0x47, 0x65, 0x74, 0x57, 0x6f, 0x72,
-	0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04,
-	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
-	0x42, 0x0e, 0x5a, 0x0c, 0x61, 0x70, 0x69, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x3b,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x02, 0x63, 0x64, 0x42, 0x0e, 0x5a,
+	0x0c, 0x61, 0x70, 0x69, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x3b, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -207,17 +108,15 @@ func file_api_service_message_proto_rawDescGZIP() []byte {
 	return file_api_service_message_proto_rawDescData
 }
 
-var file_api_service_message_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_api_service_message_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_api_service_message_proto_goTypes = []any{
 	(*ApplyServiceRequest)(nil),      // 0: clusterruntime.api.service.ApplyServiceRequest
-	(*GetServiceRequest)(nil),        // 1: clusterruntime.api.service.GetServiceRequest
-	(*GetWorkflowRequest)(nil),       // 2: clusterruntime.api.service.GetWorkflowRequest
-	(*biz.Service)(nil),              // 3: biz.service.Service
-	(*biz.ContinuousDeployment)(nil), // 4: biz.service.ContinuousDeployment
+	(*biz.Service)(nil),              // 1: biz.service.Service
+	(*biz.ContinuousDeployment)(nil), // 2: biz.service.ContinuousDeployment
 }
 var file_api_service_message_proto_depIdxs = []int32{
-	3, // 0: clusterruntime.api.service.ApplyServiceRequest.service:type_name -> biz.service.Service
-	4, // 1: clusterruntime.api.service.ApplyServiceRequest.cd:type_name -> biz.service.ContinuousDeployment
+	1, // 0: clusterruntime.api.service.ApplyServiceRequest.service:type_name -> biz.service.Service
+	2, // 1: clusterruntime.api.service.ApplyServiceRequest.cd:type_name -> biz.service.ContinuousDeployment
 	2, // [2:2] is the sub-list for method output_type
 	2, // [2:2] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
@@ -243,30 +142,6 @@ func file_api_service_message_proto_init() {
 				return nil
 			}
 		}
-		file_api_service_message_proto_msgTypes[1].Exporter = func(v any, i int) any {
-			switch v := v.(*GetServiceRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_api_service_message_proto_msgTypes[2].Exporter = func(v any, i int) any {
-			switch v := v.(*GetWorkflowRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -274,7 +149,7 @@ func file_api_service_message_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_service_message_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -20,7 +20,7 @@ func NewServiceRepo(logger log.Logger) biz.ServiceRepoInterface {
 	}
 }
 
-func (s *ServiceRepo) CommitWorklfow(ctx context.Context, wf *biz.Workflow) error {
+func (s *ServiceRepo) CommitWorkflow(ctx context.Context, wf *biz.Workflow) error {
 	argoClient, err := NewArgoWorkflowClient(wf.Namespace)
 	if err != nil {
 		return err

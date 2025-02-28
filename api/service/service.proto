@@ -11,9 +11,9 @@ option go_package = "api/service;";
 service ServiceInterface {
       rpc ApplyService(service.ApplyServiceRequest) returns (common.Msg);
 
-      rpc GetSerice(biz.service.Service) returns (biz.service.Service);
+      rpc GetService(biz.service.Service) returns (biz.service.Service);
 
-      rpc CommitWorklfow(biz.service.Workflow) returns (common.Msg);
+      rpc CommitWorkflow(biz.service.Workflow) returns (common.Msg);
 
       rpc GetWorkflow(biz.service.Workflow) returns (biz.service.Workflow);
 }
