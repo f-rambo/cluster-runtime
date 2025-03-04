@@ -47,3 +47,11 @@ func (s *ServiceInterface) GetWorkflow(ctx context.Context, wf *biz.Workflow) (*
 	err := s.serviceUc.GetWorkflow(ctx, wf)
 	return wf, err
 }
+
+func (s *ServiceInterface) CleanWorkflow(ctx context.Context, wf *biz.Workflow) (*common.Msg, error) {
+	err := s.serviceUc.CleanWorkflow(ctx, wf)
+	if err != nil {
+		return nil, err
+	}
+	return common.Response(), nil
+}

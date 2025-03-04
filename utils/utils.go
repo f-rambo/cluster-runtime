@@ -163,3 +163,7 @@ func StringToMap(s string) map[string]string {
 	}
 	return result
 }
+
+func PointerBool(b bool) *bool {
+	return &b
+}

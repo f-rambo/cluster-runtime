@@ -2,13 +2,14 @@ package repo
 
 import (
 	"context"
+	"strings"
 
 	argoworkflow "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow"
 	wfv1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	wfcommon "github.com/argoproj/argo-workflows/v3/workflow/common"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/biz"
+	"github.com/f-rambo/cloud-copilot/cluster-runtime/utils"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -161,7 +162,7 @@ func UnmarshalWorkflows(wfStr string, strict bool) ([]wfv1.Workflow, error) {
 }
 
 func ConvertToArgoWorkflow(w *biz.Workflow) *wfv1.Workflow {
-	var deleteWfSecond int32 = 500
+	var deleteWfSecond int32 = 600
 	argoWf := &wfv1.Workflow{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: argoworkflow.APIVersion,
@@ -170,34 +171,18 @@ func ConvertToArgoWorkflow(w *biz.Workflow) *wfv1.Workflow {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      w.Name,
 			Namespace: w.Namespace,
+			Labels:    utils.StringToMap(w.Lables),
 		},
 		Spec: wfv1.WorkflowSpec{
 			ServiceAccountName: ArgoWorkflowServiceAccount,
 			Entrypoint:         ArgoWorkflowEntryTmpName,
-			Templates:          []wfv1.Template{},
-			VolumeClaimTemplates: []apiv1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: w.Name + "-vol",
-					},
-					Spec: apiv1.PersistentVolumeClaimSpec{
-						AccessModes: []apiv1.PersistentVolumeAccessMode{
-							apiv1.ReadWriteOnce,
-						},
-						Resources: apiv1.VolumeResourceRequirements{
-							Requests: apiv1.ResourceList{
-								apiv1.ResourceStorage: resource.MustParse("1Gi"),
-							},
-						},
-					},
-				},
-			},
+			Templates:          make([]wfv1.Template, 0),
 			Volumes: []apiv1.Volume{
 				{
-					Name: w.Name + "-vol",
+					Name: w.GetWorkdirName(),
 					VolumeSource: apiv1.VolumeSource{
 						PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
-							ClaimName: w.Name + "-vol",
+							ClaimName: w.GetStorageName(),
 						},
 					},
 				},
@@ -209,41 +194,73 @@ func ConvertToArgoWorkflow(w *biz.Workflow) *wfv1.Workflow {
 			},
 		},
 	}
-	mainTemplate := wfv1.Template{
-		Name:  ArgoWorkflowEntryTmpName,
-		Steps: make([]wfv1.ParallelSteps, 0),
-	}
-	appDir := "/app"
-	var steps []wfv1.WorkflowStep
 	for _, step := range w.WorkflowSteps {
 		for _, task := range step.WorkflowTasks {
-			stepTemplate := wfv1.Template{
+			task.Name = strings.ToLower(task.Name)
+			argoWf.Spec.Templates = append(argoWf.Spec.Templates, wfv1.Template{
 				Name: task.Name,
 				Container: &apiv1.Container{
 					Name:       task.Name,
 					Image:      step.Image,
 					Command:    []string{"sh", "-c"},
 					Args:       []string{task.TaskCommand},
-					WorkingDir: appDir,
+					WorkingDir: w.GetWorkdir(),
 					VolumeMounts: []apiv1.VolumeMount{
 						{
-							Name:      w.Name + "-vol",
-							MountPath: appDir,
+							Name:      w.GetWorkdirName(),
+							MountPath: w.GetWorkdir(),
 						},
 					},
 				},
-			}
-			argoWf.Spec.Templates = append(argoWf.Spec.Templates, stepTemplate)
-			steps = append(steps, wfv1.WorkflowStep{
-				Name:     task.Name,
-				Template: task.Name,
 			})
 		}
 	}
-	if len(steps) > 0 {
-		mainTemplate.Steps = append(mainTemplate.Steps, wfv1.ParallelSteps{Steps: steps})
+	DAGTasks := make([]wfv1.DAGTask, 0)
+	firstStep := w.GetFirstStep()
+	if firstStep == nil {
+		return nil
 	}
-	argoWf.Spec.Templates = append(argoWf.Spec.Templates, mainTemplate)
+	firstTask := firstStep.GetFirstTask()
+	if firstTask == nil {
+		return nil
+	}
+
+	DAGTasks = append(DAGTasks, wfv1.DAGTask{
+		Name:     firstTask.Name,
+		Template: firstTask.Name,
+	})
+	currentStep := firstStep
+	currentTask := firstTask
+	prevTaskName := currentTask.Name
+
+	for {
+		nextTask := currentStep.GetNextTask(currentTask)
+
+		if nextTask == nil {
+			nextStep := w.GetNextStep(currentStep)
+			if nextStep == nil {
+				break
+			}
+			currentStep = nextStep
+			nextTask = currentStep.GetFirstTask()
+			if nextTask == nil {
+				break
+			}
+		}
+
+		DAGTasks = append(DAGTasks, wfv1.DAGTask{
+			Name:         nextTask.Name,
+			Template:     nextTask.Name,
+			Dependencies: []string{prevTaskName},
+		})
+
+		prevTaskName = nextTask.Name
+		currentTask = nextTask
+	}
+	argoWf.Spec.Templates = append(argoWf.Spec.Templates, wfv1.Template{
+		Name: ArgoWorkflowEntryTmpName,
+		DAG:  &wfv1.DAGTemplate{Tasks: DAGTasks},
+	})
 	return argoWf
 }
 
