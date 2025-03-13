@@ -150,7 +150,7 @@ func (c *ClusterUsecase) CreateYAMLFile(ctx context.Context, dynamicClient *dyna
 }
 
 func (c *ClusterUsecase) CheckClusterInstalled(cluster *Cluster) error {
-	_, err := GetKubeClientByRestConfig(cluster.ApiServerAddress, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
+	_, err := GetKubeClientByKubeConfig()
 	if err != nil {
 		return ErrClusterNotFound
 	}
@@ -174,7 +174,7 @@ func (c *ClusterUsecase) CurrentCluster(ctx context.Context, cluster *Cluster) e
 }
 
 func (c *ClusterUsecase) HandlerNodes(ctx context.Context, cluster *Cluster) error {
-	clientset, err := GetKubeClientByRestConfig(cluster.ApiServerAddress, cluster.Token, cluster.CaData, cluster.KeyData, cluster.CertData)
+	clientset, err := GetKubeClientByKubeConfig()
 	if err != nil {
 		return err
 	}

@@ -96,7 +96,7 @@ func (a *AppInterface) InstallBasicComponent(ctx context.Context, param *appApi.
 	if param.BasicComponentAppType == 0 {
 		return nil, errors.New("basic component app type is empty")
 	}
-	apps, appReleases, err := a.appUC.InstallBasicComponent(ctx, param.BasicComponentAppType)
+	apps, appReleases, err := a.appUC.InstallBasicComponent(ctx, param.Cluster, param.BasicComponentAppType)
 	if err != nil {
 		return nil, err
 	}

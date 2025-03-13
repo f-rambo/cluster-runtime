@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/f-rambo/cloud-copilot/cluster-runtime/component"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/internal/conf"
 	"github.com/f-rambo/cloud-copilot/cluster-runtime/utils"
 	"github.com/go-kratos/kratos/v2/log"
@@ -91,7 +92,7 @@ func (a *AppUsecase) GetAppConfigPath(appName, appVersionNumber string) string {
 	return fmt.Sprintf("%s/%s-%s.yaml", appPath, appName, appVersionNumber)
 }
 
-func (a *AppUsecase) InstallBasicComponent(ctx context.Context, basicAppType BasicComponentAppType) ([]*App, []*AppRelease, error) {
+func (a *AppUsecase) InstallBasicComponent(ctx context.Context, cluster *Cluster, basicAppType BasicComponentAppType) ([]*App, []*AppRelease, error) {
 	appPath := utils.GetServerStoragePathByNames(AppPackage)
 	apps := make([]*App, 0)
 	appReleases := make([]*AppRelease, 0)
@@ -104,9 +105,14 @@ func (a *AppUsecase) InstallBasicComponent(ctx context.Context, basicAppType Bas
 		if !utils.IsFileExist(appchart) {
 			return nil, nil, errors.Errorf("appchart not found: %s", appchart)
 		}
+		appConfig := fmt.Sprintf("%s/%s-%s.yaml", appPath, v.Name, v.Version)
+		err := component.TransferredMeaning(cluster, appConfig)
+		if err != nil {
+			return nil, nil, err
+		}
 		app := &App{Name: v.Name}
 		appVersion := &AppVersion{Chart: appchart, Version: v.Version}
-		err := a.GetAppAndVersionInfo(ctx, app, appVersion)
+		err = a.GetAppAndVersionInfo(ctx, app, appVersion)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -130,6 +136,11 @@ func (a *AppUsecase) InstallBasicComponent(ctx context.Context, basicAppType Bas
 		appReleases = append(appReleases, appRelease)
 	}
 	return apps, appReleases, nil
+}
+
+func (a *AppUsecase) SettingBasicComponent(ctx context.Context, cluster *Cluster) error {
+	// Read compoment config and update config apply to cluster. example: ceph-cluster... by nodes info
+	return nil
 }
 
 func (a *AppUsecase) DeleteApp(ctx context.Context, app *App) error {

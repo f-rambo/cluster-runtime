@@ -3,6 +3,7 @@ syntax = "proto3";
 package clusterruntime.api.app;
 
 import "internal/biz/app.proto";
+import "internal/biz/cluster.proto";
 
 option go_package = "api/app;";
 
@@ -56,6 +57,7 @@ message DeleteAppVersionReq {
 
 message InstallBasicComponentReq {
       biz.app.BasicComponentAppType basic_component_app_type = 1;
+      biz.cluster.Cluster cluster = 2;
 }
 
 message InstallBasicComponentResponse {

@@ -33,7 +33,6 @@ Thumbs.db
 *.key
 *.log
 bin/
-apps/
 
 # Develop tools
 .vscode/
